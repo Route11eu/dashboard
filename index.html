@@ -534,7 +534,7 @@
 
     .route-row {
       display: grid;
-      grid-template-columns: 50px 1fr 1fr 80px 80px auto;
+      grid-template-columns: 60px 1fr 1fr auto 100px;
       gap: 12px;
       align-items: center;
       padding: 12px 16px;
@@ -545,6 +545,45 @@
 
     .route-row:hover {
       background: var(--bg-card-hover);
+    }
+
+    .date-header {
+      background: linear-gradient(135deg, #1e3a5f, #1e2a4a);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: var(--radius);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      margin-bottom: 4px;
+    }
+
+    .date-header .day {
+      font-weight: 700;
+      font-size: 14px;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .date-header .count {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .country-header {
+      padding: 8px 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-bottom: 1px solid var(--border);
     }
 
     @media (max-width: 768px) {
@@ -913,11 +952,24 @@
       );
     }
 
+    // ==================== COUNTRY NAMES ====================
+    const COUNTRY_NAMES = {
+      'DE': 'GERMANY', 'PL': 'POLAND', 'BE': 'BELGIUM', 'NL': 'NETHERLANDS', 'FR': 'FRANCE',
+      'AT': 'AUSTRIA', 'CZ': 'CZECH REPUBLIC', 'HU': 'HUNGARY', 'IT': 'ITALY', 'ES': 'SPAIN',
+      'SK': 'SLOVAKIA', 'CH': 'SWITZERLAND', 'DK': 'DENMARK', 'SE': 'SWEDEN', 'UK': 'UNITED KINGDOM',
+      'RO': 'ROMANIA', 'HR': 'CROATIA', 'LT': 'LITHUANIA', 'LV': 'LATVIA', 'EE': 'ESTONIA',
+      'SI': 'SLOVENIA', 'BG': 'BULGARIA', 'PT': 'PORTUGAL', 'LU': 'LUXEMBOURG', 'RS': 'SERBIA',
+      'FI': 'FINLAND', 'NO': 'NORWAY', 'GR': 'GREECE'
+    };
+
+    const getCountryCode = (code) => code ? code.split('-')[0] : '';
+    const getCountryName = (cc) => COUNTRY_NAMES[cc] || cc;
+
     // ==================== LOADS MANAGER ====================
     function LoadsManager({ routes, setRoutes, onBack, addToast, onRefresh, loading }) {
       const [search, setSearch] = useState('');
       const [selectedRoute, setSelectedRoute] = useState(null);
-      const [modalType, setModalType] = useState(null); // 'owner' | 'delete' | 'contact'
+      const [modalType, setModalType] = useState(null);
       const [filterAdr, setFilterAdr] = useState('all');
 
       const filtered = routes.filter(r => {
@@ -934,14 +986,33 @@
         return matchSearch && matchAdr;
       });
 
-      const openModal = (route, type) => {
-        setSelectedRoute(route);
-        setModalType(type);
-      };
+      // Group by date, then by loading country
+      const grouped = {};
+      filtered.forEach(r => {
+        const dateKey = r.dt || 'Unknown';
+        const cc = getCountryCode(r.lc);
+        if (!grouped[dateKey]) grouped[dateKey] = {};
+        if (!grouped[dateKey][cc]) grouped[dateKey][cc] = [];
+        grouped[dateKey][cc].push(r);
+      });
 
-      const closeModal = () => {
-        setSelectedRoute(null);
-        setModalType(null);
+      // Sort dates (DD.MM.YYYY format)
+      const sortedDates = Object.keys(grouped).sort((a, b) => {
+        const pa = a.split('.'); const pb = b.split('.');
+        const da = pa.length === 3 ? new Date(pa[2], pa[1] - 1, pa[0]) : new Date(0);
+        const db = pb.length === 3 ? new Date(pb[2], pb[1] - 1, pb[0]) : new Date(0);
+        return da - db;
+      });
+
+      const openModal = (route, type) => { setSelectedRoute(route); setModalType(type); };
+      const closeModal = () => { setSelectedRoute(null); setModalType(null); };
+
+      // Get day name from date string
+      const getDayName = (dt) => {
+        const p = dt.split('.');
+        if (p.length !== 3) return '';
+        const d = new Date(p[2], p[1] - 1, p[0]);
+        return ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][d.getDay()];
       };
 
       return (
@@ -972,71 +1043,78 @@
             </span>
           </div>
 
-          {/* Routes list */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            {/* Header */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '50px 1fr 1fr 80px 80px 120px',
-              gap: 12,
-              padding: '10px 16px',
-              background: 'var(--bg)',
-              borderBottom: '1px solid var(--border)',
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--text-dim)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px'
-            }}>
-              <span>#</span>
-              <span>Loading</span>
-              <span>Unloading</span>
-              <span>ADR</span>
-              <span>Date</span>
-              <span style={{ textAlign: 'right' }}>Actions</span>
-            </div>
+          {/* Grouped routes list */}
+          <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
+            {loading && filtered.length === 0 && (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No loads matching filters</div>
+            )}
 
-            {/* Rows */}
-            <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
-              {filtered.map(r => (
-                <div key={r.id} className="route-row" style={{
-                  gridTemplateColumns: '50px 1fr 1fr 80px 80px 120px'
-                }}>
-                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-dim)' }}>
-                    {r.id}
-                  </span>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>
-                      {getFlag(r.lc)} {r.ln}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.lc}</div>
+            {sortedDates.map(dateKey => {
+              const countries = grouped[dateKey];
+              const dateCount = Object.values(countries).reduce((s, arr) => s + arr.length, 0);
+              const dayName = getDayName(dateKey);
+              const sortedCountries = Object.keys(countries).sort();
+
+              return (
+                <div key={dateKey}>
+                  {/* Date header */}
+                  <div className="date-header">
+                    <span className="day">📅 {dayName} {dateKey}</span>
+                    <span className="count">{dateCount} loads</span>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>
-                      {getFlag(r.uc)} {r.un}
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.uc}</div>
-                  </div>
-                  <span className={`badge ${r.adr ? 'badge-red' : 'badge-green'}`}>
-                    {r.adr ? 'ADR' : 'NO'}
-                  </span>
-                  <span style={{ fontSize: 12, fontFamily: 'JetBrains Mono', color: 'var(--text-dim)' }}>
-                    {r.dt ? r.dt.substring(0, 5) : '—'}
-                  </span>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button className="btn-icon" title="View Owner" onClick={() => openModal(r, 'owner')}>👁️</button>
-                    <button className="btn-icon" title="Contact" onClick={() => openModal(r, 'contact')}>📩</button>
-                    <button className="btn-icon" title="Delete" onClick={() => openModal(r, 'delete')}
-                      style={{ borderColor: 'rgba(239,68,68,0.3)' }}>🗑️</button>
+
+                  <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+                    {sortedCountries.map(cc => (
+                      <div key={cc}>
+                        {/* Country sub-header */}
+                        <div className="country-header">
+                          Loading in {getFlag(cc + '-')} {getCountryName(cc)}
+                        </div>
+
+                        {/* Route rows for this country */}
+                        {countries[cc].map(r => (
+                          <div key={r.id} className="route-row">
+                            <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-dim)' }}>
+                              {r.dt ? r.dt.substring(0, 5) : '—'}
+                            </span>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                                {r.lc}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.ln}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                                {r.uc}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.un}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <span className={`badge ${r.adr ? 'badge-red' : 'badge-green'}`}>
+                                {r.adr ? 'ADR' : 'NO ADR'}
+                              </span>
+                              <span className="badge badge-blue">{r.tk}</span>
+                              {r.nt && r.nt !== 'neutral' && (
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>{r.nt}</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                              <button className="btn-icon" title="View Owner" onClick={() => openModal(r, 'owner')}>👁️</button>
+                              <button className="btn-icon" title="Contact" onClick={() => openModal(r, 'contact')}>📩</button>
+                              <button className="btn-icon" title="Delete" onClick={() => openModal(r, 'delete')}
+                                style={{ borderColor: 'rgba(239,68,68,0.3)' }}>🗑️</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-              {filtered.length === 0 && (
-                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-                  {loading ? 'Loading...' : 'No loads matching filters'}
-                </div>
-              )}
-            </div>
+              );
+            })}
           </div>
 
           {/* Modals */}
@@ -1104,28 +1182,24 @@
 
       const handleDelete = async () => {
         setDeleting(true);
-        // Remove from local state immediately
         setRoutes(prev => prev.filter(r => r.id !== route.id));
 
-        // If API is configured, also delete from GitHub
         if (APPS_SCRIPT_URL) {
           try {
-            const res = await fetch(APPS_SCRIPT_URL, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify({ action: 'deleteRoute', secret: API_SECRET, routeId: route.id })
-            });
+            const payload = encodeURIComponent(JSON.stringify({ routeId: route.id }));
+            const url = `${APPS_SCRIPT_URL}?action=deleteRoute&secret=${encodeURIComponent(API_SECRET)}&payload=${payload}`;
+            const res = await fetch(url);
             const data = await res.json();
             if (data.success) {
-              addToast(`Load #${route.id} deleted from GitHub (${route.ln} → ${route.un})`, 'success');
+              addToast(`✅ Load #${route.id} deleted permanently (${route.ln} → ${route.un})`, 'success');
             } else {
-              addToast(`Local delete OK but GitHub error: ${data.error}`, 'error');
+              addToast(`Local OK, GitHub error: ${data.error}`, 'error');
             }
           } catch (err) {
-            addToast(`Local delete OK but API error: ${err.message}`, 'error');
+            addToast(`Local OK, API error: ${err.message}`, 'error');
           }
         } else {
-          addToast(`Load #${route.id} removed (${route.ln} → ${route.un}). Deploy Web API for permanent deletion.`, 'success');
+          addToast(`Load #${route.id} removed locally. Deploy Web API for permanent deletion.`, 'success');
         }
         onClose();
       };
@@ -1240,22 +1314,12 @@
 
         setSubmitting(true);
         try {
-          // Convert date from YYYY-MM-DD to DD.MM.YYYY
           const parts = form.dt.split('-');
           const dateStr = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : form.dt;
 
-          const res = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-              action: 'addRoute',
-              secret: API_SECRET,
-              route: {
-                ...form,
-                dt: dateStr
-              }
-            })
-          });
+          const payload = encodeURIComponent(JSON.stringify({ route: { ...form, dt: dateStr } }));
+          const url = `${APPS_SCRIPT_URL}?action=addRoute&secret=${encodeURIComponent(API_SECRET)}&payload=${payload}`;
+          const res = await fetch(url);
           const data = await res.json();
           if (data.success) {
             addToast(`✅ Load added: ${form.ln} → ${form.un} (ID #${data.route?.id})`, 'success');
