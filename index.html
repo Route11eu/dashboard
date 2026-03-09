@@ -593,6 +593,50 @@
         gap: 6px;
       }
     }
+
+    .autocomplete-wrapper {
+      position: relative;
+    }
+
+    .autocomplete-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0 0 var(--radius) var(--radius);
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 200;
+      box-shadow: var(--shadow);
+    }
+
+    .autocomplete-item {
+      padding: 8px 14px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+
+    .autocomplete-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .autocomplete-item .city-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .autocomplete-item .city-code {
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+    }
   </style>
 </head>
 
@@ -847,6 +891,7 @@
                 onBack={() => setActivePage('home')}
                 addToast={addToast}
                 onRefresh={fetchRoutes}
+                routes={routes}
               />
             )}
             {activePage === 'mailing' && (
@@ -1292,8 +1337,93 @@
       );
     }
 
+    // ==================== CITY AUTOCOMPLETE ====================
+    function CityAutocomplete({ routes, value, code, onChangeCity, onChangeCode, placeholder, label, codePlaceholder }) {
+      const [query, setQuery] = useState(value || '');
+      const [showList, setShowList] = useState(false);
+      const wrapperRef = useRef(null);
+
+      // Build city database from routes
+      const cityDB = React.useMemo(() => {
+        const map = new Map();
+        routes.forEach(r => {
+          // Loading city
+          if (r.ln && r.lc) {
+            const key = r.ln.toLowerCase();
+            if (!map.has(key) || r.lc.length > map.get(key).code.length) {
+              map.set(key, { name: r.ln, code: r.lc, flag: getFlag(r.lc) });
+            }
+          }
+          // Unloading city
+          if (r.un && r.uc) {
+            const key = r.un.toLowerCase();
+            if (!map.has(key) || r.uc.length > map.get(key).code.length) {
+              map.set(key, { name: r.un, code: r.uc, flag: getFlag(r.uc) });
+            }
+          }
+        });
+        return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+      }, [routes]);
+
+      const filtered = query.length >= 2
+        ? cityDB.filter(c => c.name.toLowerCase().includes(query.toLowerCase())).slice(0, 10)
+        : [];
+
+      useEffect(() => { setQuery(value || ''); }, [value]);
+
+      // Close on outside click
+      useEffect(() => {
+        const handler = (e) => {
+          if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setShowList(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, []);
+
+      const selectCity = (city) => {
+        setQuery(city.name);
+        onChangeCity(city.name);
+        onChangeCode(city.code);
+        setShowList(false);
+      };
+
+      return (
+        <>
+          <div>
+            <label>{label}</label>
+            <div className="autocomplete-wrapper" ref={wrapperRef}>
+              <input
+                placeholder={placeholder}
+                value={query}
+                onChange={e => {
+                  setQuery(e.target.value);
+                  onChangeCity(e.target.value);
+                  setShowList(true);
+                }}
+                onFocus={() => setShowList(true)}
+              />
+              {showList && filtered.length > 0 && (
+                <div className="autocomplete-list">
+                  {filtered.map((c, i) => (
+                    <div key={i} className="autocomplete-item" onClick={() => selectCity(c)}>
+                      <span className="city-name">{c.flag} {c.name}</span>
+                      <span className="city-code">{c.code}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label>Postal Code</label>
+            <input placeholder={codePlaceholder || 'e.g. DE-20095'} value={code} onChange={e => onChangeCode(e.target.value)} />
+          </div>
+        </>
+      );
+    }
+
     // ==================== ADD LOAD FORM ====================
-    function AddLoadForm({ onBack, addToast, onRefresh }) {
+    function AddLoadForm({ onBack, addToast, onRefresh, routes }) {
       const [form, setForm] = useState({
         dt: '', ln: '', lc: '', un: '', uc: '',
         adr: false, tk: 'MONO/MULTI', nt: '', src: '', se: ''
@@ -1309,7 +1439,7 @@
         }
 
         if (!APPS_SCRIPT_URL) {
-          addToast('⚠️ Form ready but Web API not deployed yet. Deploy web-api.js in Apps Script first.', 'info');
+          addToast('⚠️ Form ready but Web API not deployed yet.', 'info');
           return;
         }
 
@@ -1349,23 +1479,27 @@
                 <input type="date" value={form.dt} onChange={e => update('dt', e.target.value)} />
               </div>
 
-              <div>
-                <label>Loading City</label>
-                <input placeholder="e.g. Antwerpen" value={form.ln} onChange={e => update('ln', e.target.value)} />
-              </div>
-              <div>
-                <label>Postal Code</label>
-                <input placeholder="e.g. BE-2000" value={form.lc} onChange={e => update('lc', e.target.value)} />
-              </div>
+              <CityAutocomplete
+                routes={routes}
+                value={form.ln}
+                code={form.lc}
+                onChangeCity={v => update('ln', v)}
+                onChangeCode={v => update('lc', v)}
+                placeholder="e.g. Antwerpen"
+                label="Loading City"
+                codePlaceholder="e.g. BE-2000"
+              />
 
-              <div>
-                <label>Unloading City</label>
-                <input placeholder="e.g. Hamburg" value={form.un} onChange={e => update('un', e.target.value)} />
-              </div>
-              <div>
-                <label>Postal Code</label>
-                <input placeholder="e.g. DE-20095" value={form.uc} onChange={e => update('uc', e.target.value)} />
-              </div>
+              <CityAutocomplete
+                routes={routes}
+                value={form.un}
+                code={form.uc}
+                onChangeCity={v => update('un', v)}
+                onChangeCode={v => update('uc', v)}
+                placeholder="e.g. Hamburg"
+                label="Unloading City"
+                codePlaceholder="e.g. DE-20095"
+              />
 
               <div>
                 <label>Tank Type</label>
