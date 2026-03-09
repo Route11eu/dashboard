@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en" translate="no">
+
+<head>
+  <meta name="google" content="notranslate">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROUTE11 · Employee Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --bg: #0c0e14;
+      --bg-card: #13161f;
+      --bg-card-hover: #181c28;
+      --border: #1e2332;
+      --border-active: #3b82f6;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --text-muted: #475569;
+      --accent-blue: #3b82f6;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
+      --accent-orange: #f59e0b;
+      --accent-purple: #a855f7;
+      --accent-cyan: #06b6d4;
+      --green-dark: #166534;
+      --red-dark: #991b1b;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    #root {
+      position: relative;
+      z-index: 1;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-8px);
+      }
+
+      75% {
+        transform: translateX(8px);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .slide-up {
+      animation: slideUp 0.5s ease-out;
+    }
+
+    .shake {
+      animation: shake 0.3s ease-in-out;
+    }
+
+    .pin-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+
+    .pin-dot.filled {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .pin-dot.error {
+      background: var(--accent-red);
+      border-color: var(--accent-red);
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .pin-key {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text);
+      font-size: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .pin-key:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--text-muted);
+    }
+
+    .pin-key:active {
+      transform: scale(0.92);
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+    }
+
+    input,
+    select,
+    textarea {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      width: 100%;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    input::placeholder {
+      color: var(--text-muted);
+    }
+
+    select {
+      cursor: pointer;
+    }
+
+    select option {
+      background: var(--bg-card);
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-green {
+      background: var(--accent-green);
+      color: white;
+    }
+
+    .btn-green:hover:not(:disabled) {
+      background: #16a34a;
+      transform: translateY(-1px);
+    }
+
+    .btn-red {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .btn-red:hover:not(:disabled) {
+      background: #dc2626;
+      transform: translateY(-1px);
+    }
+
+    .btn-orange {
+      background: var(--accent-orange);
+      color: #1a1a1a;
+    }
+
+    .btn-orange:hover:not(:disabled) {
+      background: #d97706;
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-card-hover);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-card-hover);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+    }
+
+    .toast {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      padding: 14px 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 1000;
+      animation: fadeIn 0.3s ease-out;
+      max-width: 400px;
+      box-shadow: var(--shadow);
+    }
+
+    .toast-success {
+      background: var(--green-dark);
+      color: #bbf7d0;
+      border: 1px solid #22c55e44;
+    }
+
+    .toast-error {
+      background: var(--red-dark);
+      color: #fecaca;
+      border: 1px solid #ef444444;
+    }
+
+    .toast-info {
+      background: #1e3a5f;
+      color: #93c5fd;
+      border: 1px solid #3b82f644;
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .badge-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .badge-blue {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+
+    .badge-orange {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    .badge-purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+    }
+
+    .tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tile::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 14px 14px 0 0;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    .tile:hover {
+      border-color: var(--text-muted);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .tile:hover::after {
+      opacity: 1;
+    }
+
+    .tile-blue::after {
+      background: var(--accent-blue);
+    }
+
+    .tile-green::after {
+      background: var(--accent-green);
+    }
+
+    .tile-red::after {
+      background: var(--accent-red);
+    }
+
+    .tile-orange::after {
+      background: var(--accent-orange);
+    }
+
+    .tile-purple::after {
+      background: var(--accent-purple);
+    }
+
+    .tile-cyan::after {
+      background: var(--accent-cyan);
+    }
+
+    .tile-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      max-width: 520px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    .route-row {
+      display: grid;
+      grid-template-columns: 50px 1fr 1fr 80px 80px auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .route-row:hover {
+      background: var(--bg-card-hover);
+    }
+
+    @media (max-width: 768px) {
+      .route-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ==================== CONFIG ====================
+    const PIN_CODE = '1168';
+    const LOADS_DATA_URL = 'https://loads.route11.eu';
+
+    const COUNTRY_FLAGS = {
+      'DE': '🇩🇪', 'PL': '🇵🇱', 'BE': '🇧🇪', 'NL': '🇳🇱', 'FR': '🇫🇷',
+      'AT': '🇦🇹', 'CZ': '🇨🇿', 'HU': '🇭🇺', 'IT': '🇮🇹', 'ES': '🇪🇸',
+      'SK': '🇸🇰', 'CH': '🇨🇭', 'DK': '🇩🇰', 'SE': '🇸🇪', 'UK': '🇬🇧',
+      'RO': '🇷🇴', 'HR': '🇭🇷', 'LT': '🇱🇹', 'LV': '🇱🇻', 'EE': '🇪🇪',
+      'SI': '🇸🇮', 'BG': '🇧🇬', 'PT': '🇵🇹', 'LU': '🇱🇺', 'RS': '🇷🇸',
+      'FI': '🇫🇮', 'NO': '🇳🇴', 'GR': '🇬🇷'
+    };
+
+    const getFlag = (code) => {
+      if (!code) return '🏳️';
+      const cc = code.split('-')[0];
+      return COUNTRY_FLAGS[cc] || '🏳️';
+    };
+
+    // ==================== TOAST ====================
+    function Toast({ toasts, removeToast }) {
+      return (
+        <div>
+          {toasts.map(t => (
+            <div key={t.id} className={`toast toast-${t.type}`} onClick={() => removeToast(t.id)}>
+              {t.type === 'success' && '✓ '}{t.type === 'error' && '✕ '}{t.type === 'info' && 'ℹ '}
+              {t.message}
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    function useToast() {
+      const [toasts, setToasts] = useState([]);
+      const addToast = (message, type = 'info') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+      };
+      const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+      return { toasts, addToast, removeToast };
+    }
+
+    // ==================== MAIN APP ====================
+    function App() {
+      const [authenticated, setAuthenticated] = useState(false);
+      const { toasts, addToast, removeToast } = useToast();
+
+      useEffect(() => {
+        try {
+          if (sessionStorage.getItem('r11_dash_auth') === 'true') setAuthenticated(true);
+        } catch { }
+      }, []);
+
+      const handleLogin = () => {
+        setAuthenticated(true);
+        try { sessionStorage.setItem('r11_dash_auth', 'true'); } catch { }
+      };
+
+      const handleLogout = () => {
+        setAuthenticated(false);
+        try { sessionStorage.removeItem('r11_dash_auth'); } catch { }
+      };
+
+      if (!authenticated) {
+        return (
+          <>
+            <Toast toasts={toasts} removeToast={removeToast} />
+            <PinScreen onSuccess={handleLogin} addToast={addToast} />
+          </>
+        );
+      }
+
+      return (
+        <>
+          <Toast toasts={toasts} removeToast={removeToast} />
+          <Dashboard addToast={addToast} onLogout={handleLogout} />
+        </>
+      );
+    }
+
+    // ==================== PIN SCREEN ====================
+    function PinScreen({ onSuccess, addToast }) {
+      const [pin, setPin] = useState('');
+      const [error, setError] = useState(false);
+
+      const handleKey = (num) => {
+        if (pin.length >= 4) return;
+        const newPin = pin + num;
+        setPin(newPin);
+        setError(false);
+        if (newPin.length === 4) {
+          if (newPin === PIN_CODE) {
+            setTimeout(onSuccess, 300);
+          } else {
+            setError(true);
+            addToast('Invalid PIN. Try again.', 'error');
+            setTimeout(() => { setPin(''); setError(false); }, 800);
+          }
+        }
+      };
+
+      const handleBackspace = () => {
+        setPin(pin.slice(0, -1));
+        setError(false);
+      };
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="fade-in" style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div style={{
+              fontSize: 48, fontWeight: 700, letterSpacing: '-2px',
+              background: 'linear-gradient(135deg, #3b82f6, #a855f7)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              marginBottom: 8
+            }}>ROUTE11</div>
+            <div style={{ color: 'var(--text-dim)', fontSize: 14, fontWeight: 500, letterSpacing: '3px', textTransform: 'uppercase' }}>
+              Employee Panel
+            </div>
+          </div>
+
+          <div className={error ? 'shake' : ''} style={{ display: 'flex', gap: 16, marginBottom: 40 }}>
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className={`pin-dot ${i < pin.length ? (error ? 'error' : 'filled') : ''}`} />
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+              <button key={n} className="pin-key" onClick={() => handleKey(String(n))}>{n}</button>
+            ))}
+            <div />
+            <button className="pin-key" onClick={() => handleKey('0')}>0</button>
+            <button className="pin-key" onClick={handleBackspace} style={{ fontSize: 18 }}>⌫</button>
+          </div>
+
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 24 }}>
+            Enter 4-digit PIN to access
+          </p>
+        </div>
+      );
+    }
+
+    // ==================== DASHBOARD LAYOUT ====================
+    function Dashboard({ addToast, onLogout }) {
+      const [activePage, setActivePage] = useState('home');
+      const [routes, setRoutes] = useState([]);
+      const [loadingRoutes, setLoadingRoutes] = useState(false);
+
+      // Fetch routes from loads.route11.eu
+      const fetchRoutes = useCallback(async () => {
+        setLoadingRoutes(true);
+        try {
+          const res = await fetch(LOADS_DATA_URL);
+          const html = await res.text();
+          const match = html.match(/const ROUTES\s*=\s*(\[[\s\S]*?\]);/);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            setRoutes(data);
+            addToast(`Załadowano ${data.length} ładunków`, 'success');
+          } else {
+            addToast('Nie udało się odczytać ROUTES z HTML', 'error');
+          }
+        } catch (err) {
+          addToast('Błąd pobierania danych: ' + err.message, 'error');
+        }
+        setLoadingRoutes(false);
+      }, []);
+
+      useEffect(() => { fetchRoutes(); }, []);
+
+      const stats = {
+        total: routes.length,
+        countries: [...new Set(routes.map(r => r.lc?.split('-')[0]).filter(Boolean))].length,
+        adr: routes.filter(r => r.adr).length,
+        sources: [...new Set(routes.map(r => r.src).filter(Boolean))].length
+      };
+
+      return (
+        <div style={{ minHeight: '100vh' }}>
+          {/* Header */}
+          <header style={{
+            borderBottom: '1px solid var(--border)',
+            padding: '0 24px',
+            background: 'rgba(19,22,31,0.8)',
+            backdropFilter: 'blur(12px)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100
+          }}>
+            <div style={{
+              maxWidth: 1200, margin: '0 auto',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              height: 60
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+                onClick={() => setActivePage('home')}>
+                <span style={{
+                  fontSize: 22, fontWeight: 700, letterSpacing: '-1px',
+                  background: 'linear-gradient(135deg, #3b82f6, #a855f7)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                }}>ROUTE11</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>·</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 500 }}>Dashboard</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span className="badge badge-blue" style={{ fontFamily: 'JetBrains Mono', fontSize: 11 }}>
+                  {routes.length} loads
+                </span>
+                <button className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: 12 }} onClick={onLogout}>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Content */}
+          <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px 80px' }}>
+            {activePage === 'home' && (
+              <HomePage
+                stats={stats}
+                onNavigate={setActivePage}
+                loadingRoutes={loadingRoutes}
+              />
+            )}
+            {activePage === 'loads' && (
+              <LoadsManager
+                routes={routes}
+                setRoutes={setRoutes}
+                onBack={() => setActivePage('home')}
+                addToast={addToast}
+                onRefresh={fetchRoutes}
+                loading={loadingRoutes}
+              />
+            )}
+            {activePage === 'add-load' && (
+              <AddLoadForm
+                onBack={() => setActivePage('home')}
+                addToast={addToast}
+                onRefresh={fetchRoutes}
+              />
+            )}
+            {activePage === 'mailing' && (
+              <MailingRedirect onBack={() => setActivePage('home')} />
+            )}
+          </main>
+        </div>
+      );
+    }
+
+    // ==================== HOME PAGE ====================
+    function HomePage({ stats, onNavigate, loadingRoutes }) {
+      return (
+        <div className="fade-in">
+          <div style={{ marginBottom: 32 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
+              Welcome to Route11 👋
+            </h1>
+            <p style={{ color: 'var(--text-dim)', fontSize: 15 }}>
+              Manage loads, mailing and available tankers
+            </p>
+          </div>
+
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 32 }}>
+            {[
+              { label: 'Active Loads', value: stats.total, color: 'var(--accent-blue)' },
+              { label: 'Countries', value: stats.countries, color: 'var(--accent-purple)' },
+              { label: 'ADR Loads', value: stats.adr, color: 'var(--accent-red)' },
+              { label: 'Sources', value: stats.sources, color: 'var(--accent-green)' }
+            ].map((s, i) => (
+              <div key={i} className="card" style={{ textAlign: 'center', padding: 16 }}>
+                <div style={{ fontSize: 32, fontWeight: 700, fontFamily: 'JetBrains Mono', color: s.color }}>
+                  {loadingRoutes ? '...' : s.value}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 4 }}>
+                  {s.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tiles */}
+          <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Tools
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+
+            <div className="tile tile-blue" onClick={() => onNavigate('loads')}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="tile-icon" style={{ background: 'rgba(59,130,246,0.15)' }}>📋</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Loads Manager</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Manage active loads</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                View loads, check owner, remove from list or send inquiry
+              </p>
+            </div>
+
+            <div className="tile tile-green" onClick={() => onNavigate('add-load')}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="tile-icon" style={{ background: 'rgba(34,197,94,0.15)' }}>➕</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Add Load</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Post new load</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                Add a new load directly to loads.route11.eu
+              </p>
+            </div>
+
+            <div className="tile tile-purple" onClick={() => onNavigate('mailing')}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="tile-icon" style={{ background: 'rgba(168,85,247,0.15)' }}>📧</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Mailing Hub</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Email campaigns</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                Create and send GetResponse campaigns
+              </p>
+            </div>
+
+            <div className="tile tile-orange" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="tile-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>🚚</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Available Tankers</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Free tanker trucks</div>
+                </div>
+                <span className="badge badge-orange" style={{ marginLeft: 'auto' }}>SOON</span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                Manage available tank trucks
+              </p>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== LOADS MANAGER ====================
+    function LoadsManager({ routes, setRoutes, onBack, addToast, onRefresh, loading }) {
+      const [search, setSearch] = useState('');
+      const [selectedRoute, setSelectedRoute] = useState(null);
+      const [modalType, setModalType] = useState(null); // 'owner' | 'delete' | 'contact'
+      const [filterAdr, setFilterAdr] = useState('all');
+
+      const filtered = routes.filter(r => {
+        const q = search.toLowerCase();
+        const matchSearch = !q ||
+          (r.ln || '').toLowerCase().includes(q) ||
+          (r.un || '').toLowerCase().includes(q) ||
+          (r.src || '').toLowerCase().includes(q) ||
+          (r.lc || '').toLowerCase().includes(q) ||
+          (r.uc || '').toLowerCase().includes(q);
+        const matchAdr = filterAdr === 'all' ||
+          (filterAdr === 'adr' && r.adr) ||
+          (filterAdr === 'no-adr' && !r.adr);
+        return matchSearch && matchAdr;
+      });
+
+      const openModal = (route, type) => {
+        setSelectedRoute(route);
+        setModalType(type);
+      };
+
+      const closeModal = () => {
+        setSelectedRoute(null);
+        setModalType(null);
+      };
+
+      return (
+        <div className="fade-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Powrót</button>
+            <h2 style={{ fontSize: 22, fontWeight: 700, flex: 1 }}>Loads Manager</h2>
+            <button className="btn btn-primary btn-sm" onClick={onRefresh} disabled={loading}>
+              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🔄'} Refresh
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="card" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              placeholder="🔍 Search by city, company..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+            <select value={filterAdr} onChange={e => setFilterAdr(e.target.value)} style={{ maxWidth: 150 }}>
+              <option value="all">All loads</option>
+              <option value="adr">ADR only</option>
+              <option value="no-adr">Non-ADR</option>
+            </select>
+            <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+              {filtered.length} of {routes.length} loads
+            </span>
+          </div>
+
+          {/* Routes list */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '50px 1fr 1fr 80px 80px 120px',
+              gap: 12,
+              padding: '10px 16px',
+              background: 'var(--bg)',
+              borderBottom: '1px solid var(--border)',
+              fontSize: 11,
+              fontWeight: 600,
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              <span>#</span>
+              <span>Loading</span>
+              <span>Unloading</span>
+              <span>ADR</span>
+              <span>Date</span>
+              <span style={{ textAlign: 'right' }}>Actions</span>
+            </div>
+
+            {/* Rows */}
+            <div style={{ maxHeight: '60vh', overflow: 'auto' }}>
+              {filtered.map(r => (
+                <div key={r.id} className="route-row" style={{
+                  gridTemplateColumns: '50px 1fr 1fr 80px 80px 120px'
+                }}>
+                  <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-dim)' }}>
+                    {r.id}
+                  </span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      {getFlag(r.lc)} {r.ln}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.lc}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>
+                      {getFlag(r.uc)} {r.un}
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.uc}</div>
+                  </div>
+                  <span className={`badge ${r.adr ? 'badge-red' : 'badge-green'}`}>
+                    {r.adr ? 'ADR' : 'NO'}
+                  </span>
+                  <span style={{ fontSize: 12, fontFamily: 'JetBrains Mono', color: 'var(--text-dim)' }}>
+                    {r.dt ? r.dt.substring(0, 5) : '—'}
+                  </span>
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                    <button className="btn-icon" title="View Owner" onClick={() => openModal(r, 'owner')}>👁️</button>
+                    <button className="btn-icon" title="Contact" onClick={() => openModal(r, 'contact')}>📩</button>
+                    <button className="btn-icon" title="Delete" onClick={() => openModal(r, 'delete')}
+                      style={{ borderColor: 'rgba(239,68,68,0.3)' }}>🗑️</button>
+                  </div>
+                </div>
+              ))}
+              {filtered.length === 0 && (
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                  {loading ? 'Loading...' : 'No loads matching filters'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Modals */}
+          {modalType === 'owner' && selectedRoute && (
+            <OwnerModal route={selectedRoute} onClose={closeModal} />
+          )}
+          {modalType === 'delete' && selectedRoute && (
+            <DeleteModal route={selectedRoute} onClose={closeModal} addToast={addToast} routes={routes} setRoutes={setRoutes} />
+          )}
+          {modalType === 'contact' && selectedRoute && (
+            <ContactModal route={selectedRoute} onClose={closeModal} addToast={addToast} />
+          )}
+        </div>
+      );
+    }
+
+    // ==================== OWNER MODAL ====================
+    function OwnerModal({ route, onClose }) {
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
+              👁️ Load Owner #{route.id}
+            </h3>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 4 }}>ROUTE</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>
+                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                {route.dt} · {route.tk} · {route.adr ? '🔴 ADR' : '✅ NO ADR'}
+              </div>
+            </div>
+
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>SOURCE COMPANY</div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{route.src || '—'}</div>
+
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>EMAIL</div>
+              <div style={{ fontSize: 14, fontFamily: 'JetBrains Mono' }}>
+                <a href={`mailto:${route.se}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>
+                  {route.se || '—'}
+                </a>
+              </div>
+            </div>
+
+            {route.nt && route.nt !== 'neutral' && (
+              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 16 }}>
+                <strong>Notes:</strong> {route.nt}
+              </div>
+            )}
+
+            <button className="btn btn-ghost" onClick={onClose} style={{ width: '100%', justifyContent: 'center' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== DELETE MODAL ====================
+    function DeleteModal({ route, onClose, addToast, routes, setRoutes }) {
+      const [deleting, setDeleting] = useState(false);
+
+      const handleDelete = () => {
+        // For now: remove from local state (visual only)
+        // TODO: When Apps Script Web API is ready, call API to remove from GitHub
+        setDeleting(true);
+        setTimeout(() => {
+          setRoutes(prev => prev.filter(r => r.id !== route.id));
+          addToast(`Ładunek #${route.id} usunięty (${route.ln} → ${route.un})`, 'success');
+          onClose();
+        }, 500);
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, color: 'var(--accent-red)' }}>
+              🗑️ Delete load #{route.id}?
+            </h3>
+
+            <div className="card" style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>
+                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                {route.dt} · {route.src} · {route.tk}
+              </div>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20, lineHeight: 1.5 }}>
+              ⚠️ Na razie usuwanie działa wizualnie. Po odświeżeniu ładunek wróci.
+              Pełne usuwanie z GitHub będzie dostępne po wdrożeniu Apps Script API.
+            </p>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>
+                Anuluj
+              </button>
+              <button className="btn btn-red" onClick={handleDelete} disabled={deleting} style={{ flex: 1, justifyContent: 'center' }}>
+                {deleting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🗑️'} Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== CONTACT MODAL ====================
+    function ContactModal({ route, onClose, addToast }) {
+      const [message, setMessage] = useState(
+        `Dzień dobry,\n\nJestem zainteresowany ładunkiem:\n${route.ln} → ${route.un} (${route.dt})\n\nCzy jest jeszcze dostępny?\n\nPozdrawiam,\nRoute11 Team`
+      );
+      const [sending, setSending] = useState(false);
+
+      const handleSend = () => {
+        // Open mailto with pre-filled message
+        const subject = encodeURIComponent(`Route11 Inquiry: ${route.ln} → ${route.un} (${route.dt})`);
+        const body = encodeURIComponent(message);
+        window.open(`mailto:${route.se}?subject=${subject}&body=${body}`, '_blank');
+        addToast(`Email otwarty do: ${route.se}`, 'success');
+        onClose();
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
+              📩 Contact Owner
+            </h3>
+
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                Do: {route.src} ({route.se})
+              </div>
+            </div>
+
+            <label>Message</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={8}
+              style={{ resize: 'vertical', marginBottom: 16, fontFamily: 'DM Sans, sans-serif' }}
+            />
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>
+                Anuluj
+              </button>
+              <button className="btn btn-primary" onClick={handleSend} style={{ flex: 1, justifyContent: 'center' }}>
+                📩 Open Email
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== ADD LOAD FORM ====================
+    function AddLoadForm({ onBack, addToast, onRefresh }) {
+      const [form, setForm] = useState({
+        dt: '', ln: '', lc: '', un: '', uc: '',
+        adr: false, tk: 'MONO/MULTI', nt: '', src: '', se: ''
+      });
+
+      const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+
+      const handleSubmit = () => {
+        if (!form.dt || !form.ln || !form.un) {
+          addToast('Wypełnij datę, miasto załadunku i rozładunku', 'error');
+          return;
+        }
+        // TODO: When Apps Script Web API is ready, POST to API
+        addToast('⚠️ Formularz gotowy. Dodawanie na stronę będzie aktywne po wdrożeniu Apps Script API.', 'info');
+      };
+
+      return (
+        <div className="fade-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Powrót</button>
+            <h2 style={{ fontSize: 22, fontWeight: 700 }}>Dodaj ładunek</h2>
+          </div>
+
+          <div className="card" style={{ maxWidth: 640 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label>Data załadunku</label>
+                <input type="date" value={form.dt} onChange={e => update('dt', e.target.value)} />
+              </div>
+
+              <div>
+                <label>Miasto załadunku</label>
+                <input placeholder="np. Antwerpen" value={form.ln} onChange={e => update('ln', e.target.value)} />
+              </div>
+              <div>
+                <label>Kod pocztowy</label>
+                <input placeholder="np. BE-2000" value={form.lc} onChange={e => update('lc', e.target.value)} />
+              </div>
+
+              <div>
+                <label>Miasto rozładunku</label>
+                <input placeholder="np. Hamburg" value={form.un} onChange={e => update('un', e.target.value)} />
+              </div>
+              <div>
+                <label>Kod pocztowy</label>
+                <input placeholder="np. DE-20095" value={form.uc} onChange={e => update('uc', e.target.value)} />
+              </div>
+
+              <div>
+                <label>Typ cysterny</label>
+                <select value={form.tk} onChange={e => update('tk', e.target.value)}>
+                  <option value="MONO">MONO</option>
+                  <option value="MULTI">MULTI</option>
+                  <option value="MONO/MULTI">MONO/MULTI</option>
+                </select>
+              </div>
+              <div>
+                <label>ADR</label>
+                <select value={form.adr ? 'yes' : 'no'} onChange={e => update('adr', e.target.value === 'yes')}>
+                  <option value="no">NO ADR</option>
+                  <option value="yes">ADR</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Firma źródłowa</label>
+                <input placeholder="np. TALKE" value={form.src} onChange={e => update('src', e.target.value)} />
+              </div>
+              <div>
+                <label>Email źródłowy</label>
+                <input placeholder="np. dispatch@talke.com" value={form.se} onChange={e => update('se', e.target.value)} />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label>Notatki</label>
+                <input placeholder="Produkt, uwagi, deadline..." value={form.nt} onChange={e => update('nt', e.target.value)} />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={onBack} style={{ flex: 1, justifyContent: 'center' }}>
+                Anuluj
+              </button>
+              <button className="btn btn-green" onClick={handleSubmit} style={{ flex: 1, justifyContent: 'center' }}>
+                ➕ Dodaj ładunek
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== MAILING REDIRECT ====================
+    function MailingRedirect({ onBack }) {
+      return (
+        <div className="fade-in" style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12 }}>Mailing Hub</h2>
+          <p style={{ color: 'var(--text-dim)', marginBottom: 24 }}>
+            Mailing Hub jest dostępny na osobnej stronie
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <button className="btn btn-ghost" onClick={onBack}>← Powrót</button>
+            <a href="https://mailing.route11.eu" target="_blank" rel="noopener noreferrer"
+              className="btn btn-primary" style={{ textDecoration: 'none' }}>
+              Otwórz Mailing Hub →
+            </a>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== RENDER ====================
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+
+</html>
