@@ -534,11 +534,10 @@
 
     .route-row {
       display: grid;
-      grid-template-columns: 60px 1fr 1fr auto 100px;
-      gap: 12px;
+      grid-template-columns: 50px 1fr 1fr minmax(0, 1.2fr) 100px;
+      gap: 8px;
       align-items: center;
-      padding: 12px 16px;
-      border-radius: var(--radius);
+      padding: 5px 16px;
       transition: background 0.15s;
       border-bottom: 1px solid var(--border);
     }
@@ -577,13 +576,15 @@
     }
 
     .country-header {
-      padding: 8px 20px;
-      font-size: 12px;
+      padding: 6px 20px;
+      font-size: 11px;
       font-weight: 700;
-      color: var(--text-dim);
+      color: #cbd5e1;
       text-transform: uppercase;
       letter-spacing: 1px;
+      background: rgba(30, 35, 50, 0.95);
       border-bottom: 1px solid var(--border);
+      border-top: 1px solid var(--border);
     }
 
     @media (max-width: 768px) {
@@ -1092,13 +1093,13 @@
                               </div>
                               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.un}</div>
                             </div>
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                               <span className={`badge ${r.adr ? 'badge-red' : 'badge-green'}`}>
                                 {r.adr ? 'ADR' : 'NO ADR'}
                               </span>
                               <span className="badge badge-blue">{r.tk}</span>
                               {r.nt && r.nt !== 'neutral' && (
-                                <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>{r.nt}</span>
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nt}</span>
                               )}
                             </div>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
