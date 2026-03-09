@@ -798,6 +798,8 @@
       const [activePage, setActivePage] = useState('home');
       const [routes, setRoutes] = useState([]);
       const [loadingRoutes, setLoadingRoutes] = useState(false);
+      const [tankers, setTankers] = useState([]);
+      const [loadingTankers, setLoadingTankers] = useState(false);
 
       // Fetch routes from loads.route11.eu
       const fetchRoutes = useCallback(async () => {
@@ -805,7 +807,7 @@
         try {
           const res = await fetch(LOADS_DATA_URL);
           const html = await res.text();
-          const match = html.match(/const ROUTES\s*=\s*(\[[\s\S]*?\]);/);
+          const match = html.match(/const ROUTES\s*=\s*([\[\{][\s\S]*?\]);/);
           if (match) {
             const data = JSON.parse(match[1]);
             setRoutes(data);
@@ -819,7 +821,26 @@
         setLoadingRoutes(false);
       }, []);
 
-      useEffect(() => { fetchRoutes(); }, []);
+      // Fetch tankers from API
+      const fetchTankers = useCallback(async () => {
+        setLoadingTankers(true);
+        try {
+          const url = `${APPS_SCRIPT_URL}?action=getTankers&secret=${encodeURIComponent(API_SECRET)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            setTankers(data.tankers || []);
+            addToast(`Loaded ${data.count || 0} tankers`, 'success');
+          } else {
+            addToast('Tankers: ' + (data.error || 'Unknown error'), 'error');
+          }
+        } catch (err) {
+          addToast('Error fetching tankers: ' + err.message, 'error');
+        }
+        setLoadingTankers(false);
+      }, []);
+
+      useEffect(() => { fetchRoutes(); fetchTankers(); }, []);
 
       const stats = {
         total: routes.length,
@@ -860,6 +881,9 @@
                 <span className="badge badge-blue" style={{ fontFamily: 'JetBrains Mono', fontSize: 11 }}>
                   {routes.length} loads
                 </span>
+                <span className="badge badge-orange" style={{ fontFamily: 'JetBrains Mono', fontSize: 11 }}>
+                  {tankers.length} tankers
+                </span>
                 <button className="btn btn-ghost" style={{ padding: '6px 14px', fontSize: 12 }} onClick={onLogout}>
                   Logout
                 </button>
@@ -872,6 +896,7 @@
             {activePage === 'home' && (
               <HomePage
                 stats={stats}
+                tankerCount={tankers.length}
                 onNavigate={setActivePage}
                 loadingRoutes={loadingRoutes}
               />
@@ -891,6 +916,24 @@
                 onBack={() => setActivePage('home')}
                 addToast={addToast}
                 onRefresh={fetchRoutes}
+                routes={routes}
+              />
+            )}
+            {activePage === 'tankers' && (
+              <TankersManager
+                tankers={tankers}
+                setTankers={setTankers}
+                onBack={() => setActivePage('home')}
+                addToast={addToast}
+                onRefresh={fetchTankers}
+                loading={loadingTankers}
+              />
+            )}
+            {activePage === 'add-tanker' && (
+              <AddTankerForm
+                onBack={() => setActivePage('home')}
+                addToast={addToast}
+                onRefresh={fetchTankers}
                 routes={routes}
               />
             )}
@@ -979,17 +1022,29 @@
               </p>
             </div>
 
-            <div className="tile tile-orange" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+            <div className="tile tile-orange" onClick={() => onNavigate('tankers')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div className="tile-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>🚚</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Available Tankers</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Free tanker trucks</div>
                 </div>
-                <span className="badge badge-orange" style={{ marginLeft: 'auto' }}>SOON</span>
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-                Manage available tank trucks
+                View and manage available tank trucks
+              </p>
+            </div>
+
+            <div className="tile tile-cyan" onClick={() => onNavigate('add-tanker')}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div className="tile-icon" style={{ background: 'rgba(6,182,212,0.15)' }}>🚛</div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>Add Free Tanker</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Post available truck</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+                Add a free tanker to the available trucks list
               </p>
             </div>
 
@@ -1548,8 +1603,270 @@
         </div>
       );
     }
+    // ==================== TANKERS MANAGER ====================
+    function TankersManager({ tankers, setTankers, onBack, addToast, onRefresh, loading }) {
+      const [search, setSearch] = useState('');
+      const [deletingId, setDeletingId] = useState(null);
 
-    // ==================== MAILING REDIRECT ====================
+      const filtered = tankers.filter(t => {
+        const q = search.toLowerCase();
+        return !q ||
+          (t.city || '').toLowerCase().includes(q) ||
+          (t.code || '').toLowerCase().includes(q) ||
+          (t.company || '').toLowerCase().includes(q);
+      });
+
+      // Group by available date, then by country
+      const grouped = {};
+      filtered.forEach(t => {
+        const dateKey = t.dt || 'Unknown';
+        const cc = t.code ? t.code.split('-')[0] : '';
+        if (!grouped[dateKey]) grouped[dateKey] = {};
+        if (!grouped[dateKey][cc]) grouped[dateKey][cc] = [];
+        grouped[dateKey][cc].push(t);
+      });
+
+      const sortedDates = Object.keys(grouped).sort((a, b) => {
+        const pa = a.split('.'); const pb = b.split('.');
+        const da = pa.length === 3 ? new Date(pa[2], pa[1] - 1, pa[0]) : new Date(0);
+        const db = pb.length === 3 ? new Date(pb[2], pb[1] - 1, pb[0]) : new Date(0);
+        return da - db;
+      });
+
+      const getDayName = (dt) => {
+        const p = dt.split('.');
+        if (p.length !== 3) return '';
+        const d = new Date(p[2], p[1] - 1, p[0]);
+        return ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][d.getDay()];
+      };
+
+      const handleDelete = async (tanker) => {
+        setDeletingId(tanker.id);
+        setTankers(prev => prev.filter(t => t.id !== tanker.id));
+        try {
+          const payload = encodeURIComponent(JSON.stringify({ tankerId: tanker.id }));
+          const url = `${APPS_SCRIPT_URL}?action=deleteTanker&secret=${encodeURIComponent(API_SECRET)}&payload=${payload}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            addToast(`\u2705 Tanker #${tanker.id} removed (${tanker.city})`, 'success');
+          } else {
+            addToast(`Error: ${data.error}`, 'error');
+          }
+        } catch (err) {
+          addToast(`API error: ${err.message}`, 'error');
+        }
+        setDeletingId(null);
+      };
+
+      return (
+        <div className="fade-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>{'\u2190'} Back</button>
+            <h2 style={{ fontSize: 22, fontWeight: 700, flex: 1 }}>Available Tankers</h2>
+            <button className="btn btn-primary btn-sm" onClick={onRefresh} disabled={loading}>
+              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '\ud83d\udd04'} Refresh
+            </button>
+          </div>
+
+          <div className="card" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              placeholder="\ud83d\udd0d Search by city, company..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+            <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 'auto' }}>
+              {filtered.length} of {tankers.length} tankers
+            </span>
+          </div>
+
+          <div style={{ maxHeight: '65vh', overflow: 'auto' }}>
+            {loading && filtered.length === 0 && (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading tankers...</div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                No tankers available. Add one from the dashboard!
+              </div>
+            )}
+
+            {sortedDates.map(dateKey => {
+              const countries = grouped[dateKey];
+              const dateCount = Object.values(countries).reduce((s, arr) => s + arr.length, 0);
+              const dayName = getDayName(dateKey);
+              const sortedCountries = Object.keys(countries).sort();
+
+              return (
+                <div key={dateKey}>
+                  <div className="date-header">
+                    <span className="day">{'\ud83d\udcc5'} {dayName} {dateKey}</span>
+                    <span className="count">{dateCount} tankers</span>
+                  </div>
+
+                  <div className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 8 }}>
+                    {sortedCountries.map(cc => (
+                      <div key={cc}>
+                        <div className="country-header">
+                          Available in {getFlag(cc + '-')} {getCountryName(cc) || 'OTHER'}
+                        </div>
+
+                        {countries[cc].map(t => (
+                          <div key={t.id} className="route-row">
+                            <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-dim)' }}>
+                              {t.dt ? t.dt.substring(0, 5) : '\u2014'}
+                            </span>
+                            <div>
+                              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                                {getFlag(t.code)} {t.city}
+                              </div>
+                              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{t.code}</div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, color: 'var(--text-dim)' }}>
+                                {t.company || '\u2014'}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{t.contact || ''}</div>
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              <span className={`badge ${t.adr ? 'badge-red' : 'badge-green'}`}>
+                                {t.adr ? 'ADR' : 'NO ADR'}
+                              </span>
+                              <span className="badge badge-blue">{t.tk || 'MONO/MULTI'}</span>
+                              {t.nt && t.nt !== 'neutral' && (
+                                <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.nt}</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                              <button className="btn-icon" title="Delete" onClick={() => handleDelete(t)}
+                                style={{ borderColor: 'rgba(239,68,68,0.3)' }}>{'\ud83d\uddd1\ufe0f'}</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== ADD TANKER FORM ====================
+    function AddTankerForm({ onBack, addToast, onRefresh, routes }) {
+      const [form, setForm] = useState({
+        dt: '', city: '', code: '',
+        adr: false, tk: 'MONO/MULTI', nt: '',
+        company: '', contact: ''
+      });
+      const [submitting, setSubmitting] = useState(false);
+
+      const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
+
+      const handleSubmit = async () => {
+        if (!form.dt || !form.city) {
+          addToast('Please fill in: available date and city', 'error');
+          return;
+        }
+        if (!form.code) {
+          addToast('Postal code is required! Use suggestions or enter manually (e.g. DE-20095)', 'error');
+          return;
+        }
+
+        setSubmitting(true);
+        try {
+          const parts = form.dt.split('-');
+          const dateStr = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : form.dt;
+
+          const payload = encodeURIComponent(JSON.stringify({ tanker: { ...form, dt: dateStr } }));
+          const url = `${APPS_SCRIPT_URL}?action=addTanker&secret=${encodeURIComponent(API_SECRET)}&payload=${payload}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (data.success) {
+            addToast(`\u2705 Tanker added in ${form.city} (ID #${data.tanker?.id})`, 'success');
+            setForm({ dt: '', city: '', code: '', adr: false, tk: 'MONO/MULTI', nt: '', company: '', contact: '' });
+            onRefresh();
+          } else {
+            addToast(`Error: ${data.error}`, 'error');
+          }
+        } catch (err) {
+          addToast('API error: ' + err.message, 'error');
+        }
+        setSubmitting(false);
+      };
+
+      return (
+        <div className="fade-in">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>{'\u2190'} Back</button>
+            <h2 style={{ fontSize: 22, fontWeight: 700 }}>Add Free Tanker</h2>
+          </div>
+
+          <div className="card" style={{ maxWidth: 640 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label>Available From Date</label>
+                <input type="date" value={form.dt} onChange={e => update('dt', e.target.value)} />
+              </div>
+
+              <CityAutocomplete
+                routes={routes}
+                value={form.city}
+                code={form.code}
+                onChangeCity={v => update('city', v)}
+                onChangeCode={v => update('code', v)}
+                placeholder="e.g. Hamburg"
+                label="Location City"
+                codePlaceholder="e.g. DE-20095"
+              />
+
+              <div>
+                <label>Tank Type</label>
+                <select value={form.tk} onChange={e => update('tk', e.target.value)}>
+                  <option value="MONO">MONO</option>
+                  <option value="MULTI">MULTI</option>
+                  <option value="MONO/MULTI">MONO/MULTI</option>
+                </select>
+              </div>
+              <div>
+                <label>ADR</label>
+                <select value={form.adr ? 'yes' : 'no'} onChange={e => update('adr', e.target.value === 'yes')}>
+                  <option value="no">NO ADR</option>
+                  <option value="yes">ADR</option>
+                </select>
+              </div>
+
+              <div>
+                <label>Company</label>
+                <input placeholder="e.g. Route11" value={form.company} onChange={e => update('company', e.target.value)} />
+              </div>
+              <div>
+                <label>Contact Email</label>
+                <input placeholder="e.g. office@route11.eu" value={form.contact} onChange={e => update('contact', e.target.value)} />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label>Notes</label>
+                <input placeholder="Capacity, special requirements..." value={form.nt} onChange={e => update('nt', e.target.value)} />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={onBack} style={{ flex: 1, justifyContent: 'center' }}>
+                Cancel
+              </button>
+              <button className="btn btn-green" onClick={handleSubmit} disabled={submitting} style={{ flex: 1, justifyContent: 'center' }}>
+                {submitting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '\ud83d\ude9b'} Add Tanker
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+
     function MailingRedirect({ onBack }) {
       return (
         <div className="fade-in" style={{ textAlign: 'center', padding: '60px 20px' }}>
