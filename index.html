@@ -565,6 +565,9 @@
     // ==================== CONFIG ====================
     const PIN_CODE = '1168';
     const LOADS_DATA_URL = 'https://loads.route11.eu';
+    // After deploying web-api.js in Apps Script, paste the Web App URL here:
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7o2xk4fFOa7_vqAQb9xHxNaYoq4q5TCefzZNTNYNb-_e9Dpstx7cdvwQKznh3jEzD/exec';
+    const API_SECRET = 'R11Dashboard2026!';
 
     const COUNTRY_FLAGS = {
       'DE': '🇩🇪', 'PL': '🇵🇱', 'BE': '🇧🇪', 'NL': '🇳🇱', 'FR': '🇫🇷',
@@ -722,12 +725,12 @@
           if (match) {
             const data = JSON.parse(match[1]);
             setRoutes(data);
-            addToast(`Załadowano ${data.length} ładunków`, 'success');
+            addToast(`Loaded ${data.length} loads`, 'success');
           } else {
-            addToast('Nie udało się odczytać ROUTES z HTML', 'error');
+            addToast('Failed to read ROUTES from HTML', 'error');
           }
         } catch (err) {
-          addToast('Błąd pobierania danych: ' + err.message, 'error');
+          addToast('Error fetching data: ' + err.message, 'error');
         }
         setLoadingRoutes(false);
       }, []);
@@ -944,7 +947,7 @@
       return (
         <div className="fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Powrót</button>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
             <h2 style={{ fontSize: 22, fontWeight: 700, flex: 1 }}>Loads Manager</h2>
             <button className="btn btn-primary btn-sm" onClick={onRefresh} disabled={loading}>
               {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🔄'} Refresh
@@ -1099,15 +1102,32 @@
     function DeleteModal({ route, onClose, addToast, routes, setRoutes }) {
       const [deleting, setDeleting] = useState(false);
 
-      const handleDelete = () => {
-        // For now: remove from local state (visual only)
-        // TODO: When Apps Script Web API is ready, call API to remove from GitHub
+      const handleDelete = async () => {
         setDeleting(true);
-        setTimeout(() => {
-          setRoutes(prev => prev.filter(r => r.id !== route.id));
-          addToast(`Ładunek #${route.id} usunięty (${route.ln} → ${route.un})`, 'success');
-          onClose();
-        }, 500);
+        // Remove from local state immediately
+        setRoutes(prev => prev.filter(r => r.id !== route.id));
+
+        // If API is configured, also delete from GitHub
+        if (APPS_SCRIPT_URL) {
+          try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify({ action: 'deleteRoute', secret: API_SECRET, routeId: route.id })
+            });
+            const data = await res.json();
+            if (data.success) {
+              addToast(`Load #${route.id} deleted from GitHub (${route.ln} → ${route.un})`, 'success');
+            } else {
+              addToast(`Local delete OK but GitHub error: ${data.error}`, 'error');
+            }
+          } catch (err) {
+            addToast(`Local delete OK but API error: ${err.message}`, 'error');
+          }
+        } else {
+          addToast(`Load #${route.id} removed (${route.ln} → ${route.un}). Deploy Web API for permanent deletion.`, 'success');
+        }
+        onClose();
       };
 
       return (
@@ -1127,13 +1147,14 @@
             </div>
 
             <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20, lineHeight: 1.5 }}>
-              ⚠️ Na razie usuwanie działa wizualnie. Po odświeżeniu ładunek wróci.
-              Pełne usuwanie z GitHub będzie dostępne po wdrożeniu Apps Script API.
+              {APPS_SCRIPT_URL
+                ? '⚠️ This will permanently remove the load from loads.route11.eu'
+                : '⚠️ Visual delete only. Load will return after refresh. Deploy Web API for permanent deletion.'}
             </p>
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>
-                Anuluj
+                Cancel
               </button>
               <button className="btn btn-red" onClick={handleDelete} disabled={deleting} style={{ flex: 1, justifyContent: 'center' }}>
                 {deleting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🗑️'} Delete
@@ -1147,16 +1168,15 @@
     // ==================== CONTACT MODAL ====================
     function ContactModal({ route, onClose, addToast }) {
       const [message, setMessage] = useState(
-        `Dzień dobry,\n\nJestem zainteresowany ładunkiem:\n${route.ln} → ${route.un} (${route.dt})\n\nCzy jest jeszcze dostępny?\n\nPozdrawiam,\nRoute11 Team`
+        `Hello,\n\nI am interested in your load:\n${route.ln} → ${route.un} (${route.dt})\n\nIs it still available?\n\nBest regards,\nRoute11 Team`
       );
       const [sending, setSending] = useState(false);
 
       const handleSend = () => {
-        // Open mailto with pre-filled message
         const subject = encodeURIComponent(`Route11 Inquiry: ${route.ln} → ${route.un} (${route.dt})`);
         const body = encodeURIComponent(message);
         window.open(`mailto:${route.se}?subject=${subject}&body=${body}`, '_blank');
-        addToast(`Email otwarty do: ${route.se}`, 'success');
+        addToast(`Email opened to: ${route.se}`, 'success');
         onClose();
       };
 
@@ -1186,7 +1206,7 @@
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost" onClick={onClose} style={{ flex: 1, justifyContent: 'center' }}>
-                Anuluj
+                Cancel
               </button>
               <button className="btn btn-primary" onClick={handleSend} style={{ flex: 1, justifyContent: 'center' }}>
                 📩 Open Email
@@ -1203,52 +1223,87 @@
         dt: '', ln: '', lc: '', un: '', uc: '',
         adr: false, tk: 'MONO/MULTI', nt: '', src: '', se: ''
       });
+      const [submitting, setSubmitting] = useState(false);
 
       const update = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
-      const handleSubmit = () => {
+      const handleSubmit = async () => {
         if (!form.dt || !form.ln || !form.un) {
-          addToast('Wypełnij datę, miasto załadunku i rozładunku', 'error');
+          addToast('Please fill in: date, loading city, and unloading city', 'error');
           return;
         }
-        // TODO: When Apps Script Web API is ready, POST to API
-        addToast('⚠️ Formularz gotowy. Dodawanie na stronę będzie aktywne po wdrożeniu Apps Script API.', 'info');
+
+        if (!APPS_SCRIPT_URL) {
+          addToast('⚠️ Form ready but Web API not deployed yet. Deploy web-api.js in Apps Script first.', 'info');
+          return;
+        }
+
+        setSubmitting(true);
+        try {
+          // Convert date from YYYY-MM-DD to DD.MM.YYYY
+          const parts = form.dt.split('-');
+          const dateStr = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : form.dt;
+
+          const res = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+              action: 'addRoute',
+              secret: API_SECRET,
+              route: {
+                ...form,
+                dt: dateStr
+              }
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            addToast(`✅ Load added: ${form.ln} → ${form.un} (ID #${data.route?.id})`, 'success');
+            setForm({ dt: '', ln: '', lc: '', un: '', uc: '', adr: false, tk: 'MONO/MULTI', nt: '', src: '', se: '' });
+            onRefresh();
+          } else {
+            addToast(`Error: ${data.error}`, 'error');
+          }
+        } catch (err) {
+          addToast('API error: ' + err.message, 'error');
+        }
+        setSubmitting(false);
       };
 
       return (
         <div className="fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Powrót</button>
-            <h2 style={{ fontSize: 22, fontWeight: 700 }}>Dodaj ładunek</h2>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
+            <h2 style={{ fontSize: 22, fontWeight: 700 }}>Add Load</h2>
           </div>
 
           <div className="card" style={{ maxWidth: 640 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label>Data załadunku</label>
+                <label>Loading Date</label>
                 <input type="date" value={form.dt} onChange={e => update('dt', e.target.value)} />
               </div>
 
               <div>
-                <label>Miasto załadunku</label>
-                <input placeholder="np. Antwerpen" value={form.ln} onChange={e => update('ln', e.target.value)} />
+                <label>Loading City</label>
+                <input placeholder="e.g. Antwerpen" value={form.ln} onChange={e => update('ln', e.target.value)} />
               </div>
               <div>
-                <label>Kod pocztowy</label>
-                <input placeholder="np. BE-2000" value={form.lc} onChange={e => update('lc', e.target.value)} />
-              </div>
-
-              <div>
-                <label>Miasto rozładunku</label>
-                <input placeholder="np. Hamburg" value={form.un} onChange={e => update('un', e.target.value)} />
-              </div>
-              <div>
-                <label>Kod pocztowy</label>
-                <input placeholder="np. DE-20095" value={form.uc} onChange={e => update('uc', e.target.value)} />
+                <label>Postal Code</label>
+                <input placeholder="e.g. BE-2000" value={form.lc} onChange={e => update('lc', e.target.value)} />
               </div>
 
               <div>
-                <label>Typ cysterny</label>
+                <label>Unloading City</label>
+                <input placeholder="e.g. Hamburg" value={form.un} onChange={e => update('un', e.target.value)} />
+              </div>
+              <div>
+                <label>Postal Code</label>
+                <input placeholder="e.g. DE-20095" value={form.uc} onChange={e => update('uc', e.target.value)} />
+              </div>
+
+              <div>
+                <label>Tank Type</label>
                 <select value={form.tk} onChange={e => update('tk', e.target.value)}>
                   <option value="MONO">MONO</option>
                   <option value="MULTI">MULTI</option>
@@ -1264,26 +1319,26 @@
               </div>
 
               <div>
-                <label>Firma źródłowa</label>
-                <input placeholder="np. TALKE" value={form.src} onChange={e => update('src', e.target.value)} />
+                <label>Source Company</label>
+                <input placeholder="e.g. TALKE" value={form.src} onChange={e => update('src', e.target.value)} />
               </div>
               <div>
-                <label>Email źródłowy</label>
-                <input placeholder="np. dispatch@talke.com" value={form.se} onChange={e => update('se', e.target.value)} />
+                <label>Source Email</label>
+                <input placeholder="e.g. dispatch@talke.com" value={form.se} onChange={e => update('se', e.target.value)} />
               </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
-                <label>Notatki</label>
-                <input placeholder="Produkt, uwagi, deadline..." value={form.nt} onChange={e => update('nt', e.target.value)} />
+                <label>Notes</label>
+                <input placeholder="Product, notes, deadline..." value={form.nt} onChange={e => update('nt', e.target.value)} />
               </div>
             </div>
 
             <div style={{ marginTop: 24, display: 'flex', gap: 8 }}>
               <button className="btn btn-ghost" onClick={onBack} style={{ flex: 1, justifyContent: 'center' }}>
-                Anuluj
+                Cancel
               </button>
-              <button className="btn btn-green" onClick={handleSubmit} style={{ flex: 1, justifyContent: 'center' }}>
-                ➕ Dodaj ładunek
+              <button className="btn btn-green" onClick={handleSubmit} disabled={submitting} style={{ flex: 1, justifyContent: 'center' }}>
+                {submitting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '➕'} Add Load
               </button>
             </div>
           </div>
@@ -1298,13 +1353,13 @@
           <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12 }}>Mailing Hub</h2>
           <p style={{ color: 'var(--text-dim)', marginBottom: 24 }}>
-            Mailing Hub jest dostępny na osobnej stronie
+            Mailing Hub is available on a separate page
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button className="btn btn-ghost" onClick={onBack}>← Powrót</button>
+            <button className="btn btn-ghost" onClick={onBack}>← Back</button>
             <a href="https://mailing.route11.eu" target="_blank" rel="noopener noreferrer"
               className="btn btn-primary" style={{ textDecoration: 'none' }}>
-              Otwórz Mailing Hub →
+              Open Mailing Hub →
             </a>
           </div>
         </div>
