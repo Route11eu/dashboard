@@ -1437,6 +1437,10 @@
           addToast('Please fill in: date, loading city, and unloading city', 'error');
           return;
         }
+        if (!form.lc || !form.uc) {
+          addToast('Postal codes are required! Use city suggestions or enter manually (e.g. DE-20095)', 'error');
+          return;
+        }
 
         if (!APPS_SCRIPT_URL) {
           addToast('⚠️ Form ready but Web API not deployed yet.', 'info');
