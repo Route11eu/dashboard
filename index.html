@@ -13,6 +13,9 @@
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <style>
     :root {
       --bg: #0c0e14;
@@ -637,6 +640,43 @@
       font-family: 'JetBrains Mono', monospace;
       color: var(--text-dim);
     }
+
+    /* Flatpickr dark theme overrides */
+    .flatpickr-calendar {
+      background: var(--bg-card) !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+    }
+    .flatpickr-months .flatpickr-month,
+    .flatpickr-current-month .flatpickr-monthDropdown-months,
+    .flatpickr-weekdays, span.flatpickr-weekday {
+      background: var(--bg-card) !important;
+      color: var(--text-dim) !important;
+    }
+    .flatpickr-day {
+      color: var(--text) !important;
+    }
+    .flatpickr-day:hover {
+      background: var(--bg-card-hover) !important;
+      border-color: var(--border) !important;
+    }
+    .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+      background: var(--accent-blue) !important;
+      border-color: var(--accent-blue) !important;
+      color: white !important;
+    }
+    .flatpickr-day.inRange {
+      background: rgba(59,130,246,0.2) !important;
+      border-color: rgba(59,130,246,0.2) !important;
+      box-shadow: -5px 0 0 rgba(59,130,246,0.2), 5px 0 0 rgba(59,130,246,0.2) !important;
+      color: var(--text) !important;
+    }
+    .flatpickr-day.today {
+      border-color: var(--accent-blue) !important;
+    }
+    .flatpickr-day.disabled {
+      color: var(--text-muted) !important;
+    }
   </style>
 </head>
 
@@ -1072,6 +1112,30 @@
       const [selectedRoute, setSelectedRoute] = useState(null);
       const [modalType, setModalType] = useState(null);
       const [filterAdr, setFilterAdr] = useState('all');
+      const [dateRange, setDateRange] = useState([]);
+      const fpRef = useRef(null);
+      const fpInstance = useRef(null);
+
+      useEffect(() => {
+        if (fpRef.current && !fpInstance.current) {
+          fpInstance.current = flatpickr(fpRef.current, {
+            mode: 'range',
+            dateFormat: 'd.m.Y',
+            minDate: 'today',
+            locale: { firstDayOfWeek: 1 },
+            onChange: function(selectedDates) {
+              setDateRange(selectedDates);
+            }
+          });
+        }
+        return () => { if (fpInstance.current) { fpInstance.current.destroy(); fpInstance.current = null; } };
+      }, []);
+
+      const parseDt = (dt) => {
+        const p = (dt || '').split('.');
+        if (p.length !== 3) return new Date(0);
+        return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+      };
 
       const filtered = routes.filter(r => {
         const q = search.toLowerCase();
@@ -1084,7 +1148,16 @@
         const matchAdr = filterAdr === 'all' ||
           (filterAdr === 'adr' && r.adr) ||
           (filterAdr === 'no-adr' && !r.adr);
-        return matchSearch && matchAdr;
+        if (!matchSearch || !matchAdr) return false;
+        // Date range filter
+        if (dateRange.length > 0) {
+          const rd = parseDt(r.dt); rd.setHours(12,0,0,0);
+          const from = new Date(dateRange[0]); from.setHours(0,0,0,0);
+          const to = dateRange.length > 1 ? new Date(dateRange[1]) : new Date(from);
+          to.setHours(23,59,59,999);
+          if (rd < from || rd > to) return false;
+        }
+        return true;
       });
 
       // Group by date, then by loading country
@@ -1139,6 +1212,17 @@
               <option value="adr">ADR only</option>
               <option value="no-adr">Non-ADR</option>
             </select>
+            <input
+              ref={fpRef}
+              placeholder="📅 Date range..."
+              readOnly
+              style={{ maxWidth: 220, cursor: 'pointer' }}
+            />
+            {dateRange.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { setDateRange([]); if(fpInstance.current) fpInstance.current.clear(); }}>
+                ✕ Clear dates
+              </button>
+            )}
             <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 'auto' }}>
               {filtered.length} of {routes.length} loads
             </span>
@@ -1607,13 +1691,47 @@
     function TankersManager({ tankers, setTankers, onBack, addToast, onRefresh, loading }) {
       const [search, setSearch] = useState('');
       const [deletingId, setDeletingId] = useState(null);
+      const [dateRange, setDateRange] = useState([]);
+      const fpRef = useRef(null);
+      const fpInstance = useRef(null);
+
+      useEffect(() => {
+        if (fpRef.current && !fpInstance.current) {
+          fpInstance.current = flatpickr(fpRef.current, {
+            mode: 'range',
+            dateFormat: 'd.m.Y',
+            minDate: 'today',
+            locale: { firstDayOfWeek: 1 },
+            onChange: function(selectedDates) {
+              setDateRange(selectedDates);
+            }
+          });
+        }
+        return () => { if (fpInstance.current) { fpInstance.current.destroy(); fpInstance.current = null; } };
+      }, []);
+
+      const parseDt = (dt) => {
+        const p = (dt || '').split('.');
+        if (p.length !== 3) return new Date(0);
+        return new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0]));
+      };
 
       const filtered = tankers.filter(t => {
         const q = search.toLowerCase();
-        return !q ||
+        const matchSearch = !q ||
           (t.city || '').toLowerCase().includes(q) ||
           (t.code || '').toLowerCase().includes(q) ||
           (t.company || '').toLowerCase().includes(q);
+        if (!matchSearch) return false;
+        // Date range filter
+        if (dateRange.length > 0) {
+          const td = parseDt(t.dt); td.setHours(12,0,0,0);
+          const from = new Date(dateRange[0]); from.setHours(0,0,0,0);
+          const to = dateRange.length > 1 ? new Date(dateRange[1]) : new Date(from);
+          to.setHours(23,59,59,999);
+          if (td < from || td > to) return false;
+        }
+        return true;
       });
 
       // Group by available date, then by country
@@ -1676,6 +1794,17 @@
               onChange={e => setSearch(e.target.value)}
               style={{ maxWidth: 300 }}
             />
+            <input
+              ref={fpRef}
+              placeholder={'\ud83d\udcc5 Date range...'}
+              readOnly
+              style={{ maxWidth: 220, cursor: 'pointer' }}
+            />
+            {dateRange.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { setDateRange([]); if(fpInstance.current) fpInstance.current.clear(); }}>
+                {'\u2715'} Clear dates
+              </button>
+            )}
             <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 'auto' }}>
               {filtered.length} of {tankers.length} tankers
             </span>
