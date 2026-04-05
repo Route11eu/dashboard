@@ -1,0 +1,2451 @@
+<!DOCTYPE html>
+<html lang="pl" translate="no">
+<head>
+  <meta name="google" content="notranslate">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROUTE11 · Order Management</title>
+  <link rel="icon" type="image/png" href="https://loads.route11.eu/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0c0e14; --bg-card: #13161f; --bg-card-hover: #181c28;
+      --border: #1e2332; --border-active: #3b82f6;
+      --text: #e2e8f0; --text-dim: #64748b; --text-muted: #475569;
+      --accent-blue: #3b82f6; --accent-green: #22c55e; --accent-red: #ef4444;
+      --accent-orange: #f59e0b; --accent-purple: #a855f7; --accent-cyan: #06b6d4;
+      --green-dark: #166534; --red-dark: #991b1b;
+      --radius: 10px; --radius-lg: 14px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+    body::before { content:''; position:fixed; top:0; left:0; right:0; bottom:0;
+      background-image: radial-gradient(circle at 20% 20%, rgba(59,130,246,0.04) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(168,85,247,0.03) 0%, transparent 50%);
+      pointer-events:none; z-index:0; }
+    #root { position:relative; z-index:1; }
+    ::-webkit-scrollbar { width:6px; }
+    ::-webkit-scrollbar-track { background:var(--bg); }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(40px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+    .fade-in { animation:fadeIn .4s ease-out; }
+    .slide-up { animation:slideUp .5s ease-out; }
+
+    input, select, textarea {
+      font-family:'DM Sans',sans-serif; background:var(--bg); border:1px solid var(--border);
+      color:var(--text); padding:10px 14px; border-radius:var(--radius); font-size:14px;
+      width:100%; transition:border-color .2s; outline:none;
+    }
+    input:focus, select:focus, textarea:focus { border-color:var(--accent-blue); box-shadow:0 0 0 3px rgba(59,130,246,.1); }
+    input::placeholder { color:var(--text-muted); }
+    select { cursor:pointer; }
+    select option { background:var(--bg-card); }
+    label { display:block; font-size:12px; font-weight:600; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:.5px; }
+    textarea { resize:vertical; min-height:60px; }
+
+    .btn { padding:12px 24px; border-radius:var(--radius); font-family:'DM Sans',sans-serif; font-weight:600; font-size:14px; border:none; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:8px; }
+    .btn:disabled { opacity:.4; cursor:not-allowed; }
+    .btn-primary { background:var(--accent-blue); color:white; }
+    .btn-primary:hover:not(:disabled) { background:#2563eb; transform:translateY(-1px); box-shadow:0 4px 16px rgba(59,130,246,.3); }
+    .btn-green { background:var(--accent-green); color:white; }
+    .btn-green:hover:not(:disabled) { background:#16a34a; transform:translateY(-1px); }
+    .btn-red { background:var(--accent-red); color:white; }
+    .btn-red:hover:not(:disabled) { background:#dc2626; transform:translateY(-1px); }
+    .btn-orange { background:var(--accent-orange); color:#1a1a1a; }
+    .btn-ghost { background:transparent; color:var(--text-dim); border:1px solid var(--border); }
+    .btn-ghost:hover { background:var(--bg-card-hover); color:var(--text); border-color:var(--text-muted); }
+    .btn-sm { padding:6px 12px; font-size:12px; }
+    .btn-icon { padding:8px; border-radius:8px; background:transparent; border:1px solid var(--border); color:var(--text-dim); cursor:pointer; transition:all .2s; font-size:16px; display:flex; align-items:center; justify-content:center; width:36px; height:36px; }
+    .btn-icon:hover { background:var(--bg-card-hover); color:var(--text); border-color:var(--text-muted); }
+
+    .card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; }
+    .badge { display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .badge-green { background:rgba(34,197,94,.15); color:#4ade80; }
+    .badge-red { background:rgba(239,68,68,.15); color:#f87171; }
+    .badge-blue { background:rgba(59,130,246,.15); color:#60a5fa; }
+    .badge-orange { background:rgba(245,158,11,.15); color:#fbbf24; }
+    .badge-purple { background:rgba(168,85,247,.15); color:#c084fc; }
+    .badge-cyan { background:rgba(6,182,212,.15); color:#22d3ee; }
+    .badge-gray { background:rgba(100,116,139,.15); color:#94a3b8; }
+    .badge-green-bold { background:rgba(34,197,94,.25); color:#22c55e; font-weight:800; }
+    .badge-yellow { background:rgba(234,179,8,.15); color:#facc15; }
+
+    .toast { position:fixed; top:24px; right:24px; padding:14px 20px; border-radius:var(--radius); font-size:14px; font-weight:500; z-index:1000; animation:fadeIn .3s ease-out; max-width:400px; box-shadow:var(--shadow); }
+    .toast-success { background:var(--green-dark); color:#bbf7d0; border:1px solid #22c55e44; }
+    .toast-error { background:var(--red-dark); color:#fecaca; border:1px solid #ef444444; }
+    .toast-info { background:#1e3a5f; color:#93c5fd; border:1px solid #3b82f644; }
+
+    .modal-overlay { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px); z-index:500; display:flex; align-items:center; justify-content:center; animation:fadeIn .2s ease-out; }
+    .modal { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-lg); padding:32px; max-width:620px; width:90%; max-height:85vh; overflow-y:auto; animation:slideUp .3s ease-out; }
+
+    .spinner { width:20px; height:20px; border:2px solid rgba(255,255,255,.2); border-top-color:white; border-radius:50%; animation:spin .6s linear infinite; }
+
+    .pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid var(--border); transition:all .2s; background:transparent; }
+    .pin-dot.filled { background:var(--accent-blue); border-color:var(--accent-blue); box-shadow:0 0 12px rgba(59,130,246,.4); }
+    .pin-dot.error { background:var(--accent-red); border-color:var(--accent-red); }
+    .pin-key { width:72px; height:72px; border-radius:50%; border:1px solid var(--border); background:var(--bg-card); color:var(--text); font-size:24px; font-family:'JetBrains Mono',monospace; font-weight:600; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; user-select:none; }
+    .pin-key:hover { background:var(--bg-card-hover); border-color:var(--text-muted); }
+    .pin-key:active { transform:scale(.92); background:var(--accent-blue); border-color:var(--accent-blue); }
+
+    .tbl { width:100%; border-collapse:collapse; }
+    .tbl th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--text-dim); padding:10px 12px; border-bottom:1px solid var(--border); font-weight:600; }
+    .tbl td { padding:10px 12px; border-bottom:1px solid var(--border); font-size:13px; vertical-align:middle; }
+    .tbl tr:hover td { background:var(--bg-card-hover); }
+
+    .vat-result { padding:12px 16px; border-radius:var(--radius); margin-top:8px; font-size:13px; }
+    .vat-valid { background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3); color:#4ade80; }
+    .vat-invalid { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3); color:#f87171; }
+
+    .step-indicator { display:flex; gap:4px; align-items:center; }
+    .step-dot { width:8px; height:8px; border-radius:50%; background:var(--border); transition:all .3s; }
+    .step-dot.active { background:var(--accent-blue); width:24px; border-radius:4px; }
+    .step-dot.done { background:var(--accent-green); }
+
+    .tab-bar { display:flex; gap:4px; border-bottom:1px solid var(--border); margin-bottom:20px; }
+    .tab-btn { padding:10px 20px; font-size:13px; font-weight:600; color:var(--text-dim); background:transparent; border:none; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; font-family:'DM Sans',sans-serif; }
+    .tab-btn:hover { color:var(--text); }
+    .tab-btn.active { color:var(--accent-blue); border-bottom-color:var(--accent-blue); }
+
+    .filter-bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+    .filter-bar input, .filter-bar select { width:auto; min-width:140px; padding:8px 12px; font-size:13px; }
+    .stat-card { padding:20px; border-radius:var(--radius-lg); text-align:center; border:1px solid var(--border); }
+    .stat-card .value { font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; }
+    .stat-card .label { font-size:12px; color:var(--text-dim); margin-top:4px; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+    // ==================== CONFIG ====================
+    const SUPABASE_URL = 'https://uiobkkocziqhvmqqzior.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpb2Jra29jemlxaHZtcXF6aW9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyOTY3MTgsImV4cCI6MjA5MDg3MjcxOH0.yYbxK8GpK7KbGpRMCXSEtJOawPSSYTo07aKayzgn8v4';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5CijuG7VcMW1fS9CwQI7QBsR2iotKrtxaNQbU0QCHse9RODMCeIx3g-jr3yXv5UM/exec';
+    // Per-user PINs — each team member has their own PIN
+    const USER_PINS = { '1168': 'marcin', '1111': 'kuba', '2222': 'ania', '3333': 'patryk' };
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ==================== TOAST ====================
+    function Toast({ toasts, removeToast }) {
+      return (<div>{toasts.map(t => (
+        <div key={t.id} className={`toast toast-${t.type}`} onClick={() => removeToast(t.id)}>
+          {t.type==='success'&&'✅ '}{t.type==='error'&&'❌ '}{t.type==='info'&&'ℹ️ '}{t.message}
+        </div>
+      ))}</div>);
+    }
+    function useToast() {
+      const [toasts, setToasts] = useState([]);
+      const addToast = (message, type='info') => {
+        const id = Date.now();
+        setToasts(p => [...p, {id, message, type}]);
+        setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+      };
+      return { toasts, addToast, removeToast: id => setToasts(p => p.filter(t => t.id !== id)) };
+    }
+
+    // ==================== GEMINI OCR ====================
+    const GEMINI_KEY = 'AIzaSyAg1rKFAS6lE2SGPDQlRsjrDcu2rykJ1AQ';
+    const GEMINI_MODEL = 'gemini-2.5-flash';
+    const OCR_PROMPT = `Jestes ekspertem od zlecen transportowych w Europie. Przeanalizuj dokument zlecenia transportowego i wyciagnij WSZYSTKIE dane.
+
+Zwroc dane WYLACZNIE jako JSON (bez markdown, bez komentarzy) w nastepujacej strukturze:
+
+{
+  "client": {
+    "name": "nazwa firmy zleceniodawcy",
+    "vat_number": "NIP z prefiksem kraju np. PL1234567890",
+    "address": "pelny adres",
+    "city": "miasto",
+    "postal_code": "kod pocztowy",
+    "country": "kod kraju 2-literowy",
+    "contact_person": "osoba kontaktowa",
+    "contact_phone": "telefon",
+    "contact_email": "email"
+  },
+  "order_number_client": "numer zlecenia klienta",
+  "loading": [
+    {
+      "address": "pelny adres zaladunku",
+      "city": "miasto",
+      "postal_code": "kod pocztowy",
+      "country": "kod kraju",
+      "company_name": "nazwa firmy w miejscu zaladunku",
+      "date": "data zaladunku YYYY-MM-DD",
+      "time_from": "godzina od HH:MM",
+      "time_to": "godzina do HH:MM",
+      "reference": "numer referencyjny"
+    }
+  ],
+  "unloading": [
+    {
+      "address": "pelny adres rozladunku",
+      "city": "miasto",
+      "postal_code": "kod pocztowy",
+      "country": "kod kraju",
+      "company_name": "nazwa firmy w miejscu rozladunku",
+      "date": "data rozladunku YYYY-MM-DD",
+      "time_from": "godzina od HH:MM",
+      "time_to": "godzina do HH:MM",
+      "reference": "numer referencyjny"
+    }
+  ],
+  "cargo": {
+    "description": "opis towaru",
+    "weight_kg": 0,
+    "volume_m3": 0,
+    "packaging": "typ opakowania",
+    "quantity": "ilosc",
+    "adr": "klasa ADR jesli dotyczy, null jesli nie",
+    "adr_un": "numer UN jesli ADR",
+    "temperature_min": null,
+    "temperature_max": null
+  },
+  "vehicle_requirements": {
+    "type": "typ pojazdu (cysterna, plandeka, chlodnia, etc.)",
+    "details": "dodatkowe wymagania"
+  },
+  "price": {
+    "amount": 0,
+    "currency": "EUR/PLN/CZK",
+    "payment_terms_days": 30
+  },
+  "special_conditions": "warunki specjalne",
+  "route_description": "krotki opis trasy np. DE Hamburg -> PL Gdansk"
+}
+
+WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP zawsze z prefiksem kraju.`;
+
+    // ==================== VIES VAT ====================
+    const VIES_URL = 'https://ec.europa.eu/taxation_customs/vies/rest-api/check-vat-number';
+    async function verifyVAT(fullVat) {
+      const match = fullVat.match(/^([A-Z]{2})(.+)$/);
+      if (!match) throw new Error('Format NIP: XX123456789 (prefix kraju + numer)');
+      const [, cc, num] = match;
+      const body = JSON.stringify({ countryCode: cc, vatNumber: num });
+      const hdrs = {'Content-Type':'application/json'};
+      const proxies = [
+        `${SUPABASE_URL}/functions/v1/vies-proxy`,
+        `https://corsproxy.io/?${encodeURIComponent(VIES_URL)}`,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(VIES_URL)}`
+      ];
+      for (const url of proxies) {
+        try {
+          const opts = { method:'POST', headers: url.includes('supabase') ? {...hdrs, 'Authorization':`Bearer ${SUPABASE_KEY}`} : hdrs, body };
+          const r = await fetch(url, opts);
+          if (r.ok) { const d = await r.json(); if (d.valid !== undefined) return d; }
+        } catch {}
+      }
+      throw new Error('Nie udalo sie polaczyc z VIES. Sprobuj ponownie.');
+    }
+
+    // ==================== STATUS HELPERS ====================
+    const ALL_STATUSES = ['draft','confirmed','carrier_assigned','loading','in_transit','delivered','cmr_received','invoiced','paid','cancelled'];
+    const statusLabel = s => ({draft:'Szkic',confirmed:'Potwierdzone',carrier_assigned:'Przewoznik przypisany',loading:'Zaladunek',in_transit:'W transporcie',delivered:'Dostarczone',cmr_received:'CMR odebrano',invoiced:'Faktura',paid:'Zaplacone',cancelled:'Anulowane'}[s]||s);
+    const statusBadge = s => ({draft:'badge-gray',confirmed:'badge-blue',carrier_assigned:'badge-yellow',loading:'badge-orange',in_transit:'badge-purple',delivered:'badge-green',cmr_received:'badge-cyan',invoiced:'badge-cyan',paid:'badge-green-bold',cancelled:'badge-red'}[s]||'badge-gray');
+
+    // ==================== APP ====================
+    function App() {
+      const [auth, setAuth] = useState(false);
+      const [currentUser, setCurrentUser] = useState(null);
+      const { toasts, addToast, removeToast } = useToast();
+      useEffect(() => {
+        try {
+          const savedUser = localStorage.getItem('r11_tms_user');
+          if (savedUser && TEAM_USERS.find(u => u.id === savedUser)) {
+            setCurrentUser(savedUser); setAuth(true);
+          }
+        } catch{}
+      }, []);
+      const login = (userId) => {
+        setCurrentUser(userId); setAuth(true);
+        try { localStorage.setItem('r11_tms_user', userId); } catch{}
+      };
+      const logout = () => {
+        setAuth(false); setCurrentUser(null);
+        try { localStorage.removeItem('r11_tms_user'); } catch{}
+      };
+      if (!auth) return (<><Toast toasts={toasts} removeToast={removeToast}/><PinScreen onSuccess={login} addToast={addToast}/></>);
+      return (<><Toast toasts={toasts} removeToast={removeToast}/><TMSDashboard addToast={addToast} onLogout={logout} currentUser={currentUser}/></>);
+    }
+
+    // ==================== PIN SCREEN ====================
+    function PinScreen({ onSuccess, addToast }) {
+      const [pin, setPin] = useState('');
+      const [error, setError] = useState(false);
+      const handleKey = n => {
+        if (pin.length >= 4) return;
+        const np = pin + n;
+        setPin(np); setError(false);
+        if (np.length === 4) {
+          const userId = USER_PINS[np];
+          if (userId) {
+            const user = TEAM_USERS.find(u => u.id === userId);
+            setTimeout(() => onSuccess(userId), 300);
+          } else { setError(true); addToast('Bledny PIN','error'); setTimeout(()=>{setPin('');setError(false)},800); }
+        }
+      };
+      return (
+        <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div className="fade-in" style={{textAlign:'center',marginBottom:48}}>
+            <div style={{fontSize:48,fontWeight:700,letterSpacing:'-2px',background:'linear-gradient(135deg,#3b82f6,#a855f7)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',marginBottom:8}}>ROUTE11</div>
+            <div style={{color:'var(--text-dim)',fontSize:14,fontWeight:500,letterSpacing:'3px',textTransform:'uppercase'}}>Order Management</div>
+            <div style={{color:'var(--text-muted)',fontSize:12,marginTop:12}}>Wprowadz swoj PIN</div>
+          </div>
+          <div className={error?'shake':''} style={{display:'flex',gap:16,marginBottom:40}}>
+            {[0,1,2,3].map(i => <div key={i} className={`pin-dot ${i<pin.length?(error?'error':'filled'):''}`}/>)}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:16}}>
+            {[1,2,3,4,5,6,7,8,9].map(n => <button key={n} className="pin-key" onClick={()=>handleKey(String(n))}>{n}</button>)}
+            <div/>
+            <button className="pin-key" onClick={()=>handleKey('0')}>0</button>
+            <button className="pin-key" onClick={()=>setPin(pin.slice(0,-1))} style={{fontSize:18}}>{'⌫'}</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== TMS DASHBOARD ====================
+    function TMSDashboard({ addToast, onLogout, currentUser }) {
+      const currentUserData = TEAM_USERS.find(u => u.id === currentUser);
+      const [page, setPage] = useState('orders');
+      const [stats, setStats] = useState({ companies: 0, orders: 0 });
+      const [pendingNotifications, setPendingNotifications] = useState(0);
+
+      const refreshStats = useCallback(async () => {
+        const [c, o, n] = await Promise.all([
+          sb.from('companies').select('id', { count: 'exact', head: true }),
+          sb.from('orders').select('id', { count: 'exact', head: true }),
+          sb.from('notifications').select('id', { count: 'exact', head: true }).in('status', ['PENDING'])
+        ]);
+        setStats({ companies: c.count || 0, orders: o.count || 0 });
+        setPendingNotifications(n.count || 0);
+      }, []);
+      useEffect(() => { refreshStats(); const iv = setInterval(refreshStats, 60000); return () => clearInterval(iv); }, []);
+
+      return (
+        <div style={{minHeight:'100vh'}}>
+          <header style={{borderBottom:'1px solid var(--border)',padding:'0 24px',background:'rgba(19,22,31,.8)',backdropFilter:'blur(12px)',position:'sticky',top:0,zIndex:100}}>
+            <div style={{maxWidth:1200,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',height:60}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,cursor:'pointer'}} onClick={()=>window.location.href='index.html'}>
+                <span style={{fontSize:22,fontWeight:700,letterSpacing:'-1px',background:'linear-gradient(135deg,#3b82f6,#a855f7)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>ROUTE11</span>
+                <span style={{color:'var(--text-muted)',fontSize:13}}>{'·'}</span>
+                <span style={{color:'var(--text-dim)',fontSize:13,fontWeight:500}}>Order Management</span>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <span className="badge badge-blue" style={{fontFamily:'JetBrains Mono',fontSize:11}}>{stats.companies} firm</span>
+                <span className="badge badge-orange" style={{fontFamily:'JetBrains Mono',fontSize:11}}>{stats.orders} zlecen</span>
+                <button className={`btn-icon ${pendingNotifications > 0 ? '' : ''}`} onClick={()=>setPage('notifications')} style={{position:'relative',fontSize:16}} title="Powiadomienia">
+                  {'\u{1F514}'}
+                  {pendingNotifications > 0 && (
+                    <span style={{position:'absolute',top:-4,right:-4,background:'var(--accent-red)',color:'#fff',borderRadius:'50%',width:18,height:18,fontSize:10,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>{pendingNotifications}</span>
+                  )}
+                </button>
+                {currentUserData && (
+                  <span style={{fontSize:12,color:'var(--accent-blue)',fontWeight:600,padding:'4px 12px',background:'rgba(59,130,246,.08)',borderRadius:20}}>
+                    {currentUserData.name}
+                  </span>
+                )}
+                <button className="btn btn-ghost" style={{padding:'6px 14px',fontSize:12}} onClick={onLogout}>Logout</button>
+              </div>
+            </div>
+          </header>
+
+          <div style={{maxWidth:1200,margin:'0 auto',padding:'16px 24px 0'}}>
+            <div className="tab-bar">
+              {[
+                {id:'orders',label:'Zlecenia'},
+                {id:'cashflow',label:'Cash Flow'},
+                {id:'companies',label:'Firmy'},
+                {id:'notifications',label:'Powiadomienia'}
+              ].map(t => (
+                <button key={t.id} className={`tab-btn ${page===t.id?'active':''}`} onClick={()=>setPage(t.id)}>
+                  {t.label}
+                  {t.id==='notifications' && pendingNotifications > 0 && <span style={{marginLeft:6,background:'var(--accent-red)',color:'#fff',borderRadius:8,padding:'1px 6px',fontSize:10}}>{pendingNotifications}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <main style={{maxWidth:1200,margin:'0 auto',padding:'0 24px 80px'}}>
+            {page === 'companies' && <CompanyManager addToast={addToast} onStatsChange={refreshStats}/>}
+            {page === 'orders' && <OrdersModule addToast={addToast} onStatsChange={refreshStats} currentUser={currentUser}/>}
+            {page === 'cashflow' && <CashFlowModule addToast={addToast}/>}
+            {page === 'notifications' && <NotificationsPanel addToast={addToast} onRefresh={refreshStats}/>}
+          </main>
+        </div>
+      );
+    }
+
+    // ==================== COMPANY MANAGER ====================
+    function CompanyManager({ addToast, onStatsChange }) {
+      const [companies, setCompanies] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [search, setSearch] = useState('');
+      const [filterType, setFilterType] = useState('all');
+      const [showForm, setShowForm] = useState(false);
+      const [editingCompany, setEditingCompany] = useState(null);
+      const [deleteTarget, setDeleteTarget] = useState(null);
+
+      const fetchCompanies = useCallback(async () => {
+        setLoading(true);
+        const { data, error } = await sb.from('companies').select('*').order('created_at', { ascending: false });
+        if (error) addToast('Blad ladowania firm: ' + error.message, 'error');
+        else setCompanies(data || []);
+        setLoading(false);
+      }, []);
+
+      useEffect(() => { fetchCompanies(); }, []);
+
+      const filtered = useMemo(() => {
+        return companies.filter(c => {
+          const q = search.toLowerCase();
+          const matchSearch = !q || c.name.toLowerCase().includes(q) || (c.vat_number||'').toLowerCase().includes(q) || (c.city||'').toLowerCase().includes(q);
+          const matchType = filterType === 'all' || c.company_type === filterType;
+          return matchSearch && matchType;
+        });
+      }, [companies, search, filterType]);
+
+      const handleDelete = async () => {
+        if (!deleteTarget) return;
+        const { error } = await sb.from('companies').delete().eq('id', deleteTarget.id);
+        if (error) addToast('Blad usuwania: ' + error.message, 'error');
+        else { addToast('Firma "'+deleteTarget.name+'" usunieta', 'success'); fetchCompanies(); onStatsChange(); }
+        setDeleteTarget(null);
+      };
+
+      const handleEdit = (c) => { setEditingCompany(c); setShowForm(true); };
+      const handleFormClose = () => { setShowForm(false); setEditingCompany(null); };
+      const handleFormSave = () => { handleFormClose(); fetchCompanies(); onStatsChange(); };
+
+      const typeLabel = t => ({client:'Zleceniodawca',carrier:'Transportowiec',both:'Oba'}[t] || t);
+      const typeBadge = t => ({client:'badge-blue',carrier:'badge-orange',both:'badge-purple'}[t] || 'badge-gray');
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+            <h2 style={{fontSize:22,fontWeight:700,flex:1}}>Zarzadzanie Firmami</h2>
+            <button className="btn btn-green" onClick={()=>{setEditingCompany(null);setShowForm(true)}}>+ Dodaj firme</button>
+          </div>
+
+          <div className="filter-bar">
+            <input placeholder="Szukaj firmy..." value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:200}}/>
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
+              <option value="all">Wszystkie typy</option>
+              <option value="client">Zleceniodawcy</option>
+              <option value="carrier">Transportowcy</option>
+              <option value="both">Oba</option>
+            </select>
+          </div>
+
+          <div className="card" style={{padding:0,overflow:'hidden'}}>
+            {loading ? (
+              <div style={{padding:40,textAlign:'center',color:'var(--text-muted)'}}>Ladowanie...</div>
+            ) : filtered.length === 0 ? (
+              <div style={{padding:60,textAlign:'center'}}>
+                <p style={{color:'var(--text-dim)'}}>Brak firm</p>
+                <button className="btn btn-primary" onClick={()=>setShowForm(true)} style={{marginTop:12}}>+ Dodaj firme</button>
+              </div>
+            ) : (
+              <div style={{overflowX:'auto'}}>
+                <table className="tbl">
+                  <thead><tr>
+                    <th>Firma</th><th>NIP</th><th>Miasto</th><th>Typ</th><th>Kontakt</th><th>Akcje</th>
+                  </tr></thead>
+                  <tbody>
+                    {filtered.map(c => (
+                      <tr key={c.id}>
+                        <td style={{fontWeight:600}}>{c.name}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{c.vat_number}</td>
+                        <td>{c.city} {c.country}</td>
+                        <td><span className={`badge ${typeBadge(c.company_type)}`}>{typeLabel(c.company_type)}</span></td>
+                        <td style={{fontSize:12}}>{c.phone || c.email || '---'}</td>
+                        <td>
+                          <div style={{display:'flex',gap:4}}>
+                            <button className="btn-icon" title="Edytuj" onClick={()=>handleEdit(c)}>E</button>
+                            <button className="btn-icon" title="Usun" onClick={()=>setDeleteTarget(c)} style={{color:'var(--accent-red)'}}>X</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {deleteTarget && (
+            <div className="modal-overlay" onClick={()=>setDeleteTarget(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()}>
+                <h3 style={{marginBottom:16}}>Usunac firme?</h3>
+                <p style={{color:'var(--text-dim)',marginBottom:20}}>"{deleteTarget.name}" zostanie trwale usunieta.</p>
+                <div style={{display:'flex',gap:8}}>
+                  <button className="btn btn-ghost" onClick={()=>setDeleteTarget(null)} style={{flex:1,justifyContent:'center'}}>Anuluj</button>
+                  <button className="btn btn-red" onClick={handleDelete} style={{flex:1,justifyContent:'center'}}>Usun</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showForm && <CompanyForm company={editingCompany} addToast={addToast} onClose={handleFormClose} onSave={handleFormSave}/>}
+        </div>
+      );
+    }
+
+    // ==================== COMPANY FORM ====================
+    function CompanyForm({ company, addToast, onClose, onSave }) {
+      const isEdit = !!company;
+      const [form, setForm] = useState(company || {
+        vat_number:'',name:'',address:'',city:'',postal_code:'',country:'',
+        phone:'',email:'',contact_person:'',contact_phone:'',contact_email:'',
+        company_type:'carrier',bank_name:'',bank_account:'',payment_terms_days:30,notes:''
+      });
+      const [vatChecking, setVatChecking] = useState(false);
+      const [vatResult, setVatResult] = useState(null);
+      const [saving, setSaving] = useState(false);
+      const [subTab, setSubTab] = useState('info');
+      const showFleet = isEdit && (form.company_type === 'carrier' || form.company_type === 'both');
+
+      const u = (k,v) => setForm(p => ({...p,[k]:v}));
+
+      const checkVAT = async () => {
+        if (!form.vat_number || form.vat_number.length < 4) { addToast('Podaj NIP','error'); return; }
+        setVatChecking(true); setVatResult(null);
+        try {
+          const data = await verifyVAT(form.vat_number.toUpperCase().replace(/\s/g,''));
+          setVatResult(data);
+          if (data.valid) {
+            u('name', data.name || form.name);
+            if (data.address) {
+              const parts = data.address.split('\n');
+              u('address', parts[0] || '');
+              if (parts[1]) {
+                const m = parts[1].match(/(\d[\d\s-]*)\s+(.+)/);
+                if (m) { u('postal_code', m[1].trim()); u('city', m[2].trim()); }
+                else u('city', parts[1].trim());
+              }
+            }
+            u('country', form.vat_number.substring(0,2).toUpperCase());
+            addToast('NIP zweryfikowany - dane uzupelnione!', 'success');
+          } else { addToast('NIP nieprawidlowy wg VIES', 'error'); }
+        } catch (err) { addToast(err.message, 'error'); }
+        setVatChecking(false);
+      };
+
+      const handleSave = async () => {
+        if (!form.name) { addToast('Podaj nazwe firmy', 'error'); return; }
+        setSaving(true);
+        const payload = {...form, vat_verified: vatResult?.valid || form.vat_verified || false, updated_at: new Date().toISOString()};
+        delete payload.id; delete payload.created_at;
+        let error;
+        if (isEdit) { ({error} = await sb.from('companies').update(payload).eq('id', company.id)); }
+        else { ({error} = await sb.from('companies').insert(payload)); }
+        if (error) addToast('Blad zapisu: ' + error.message, 'error');
+        else { addToast(isEdit ? 'Firma zaktualizowana' : 'Firma dodana!', 'success'); onSave(); }
+        setSaving(false);
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:750,maxHeight:'90vh',overflowY:'auto'}}>
+            <h3 style={{marginBottom:12}}>{isEdit ? 'Edytuj firme' : 'Dodaj nowa firme'}</h3>
+            {showFleet && (
+              <div style={{display:'flex',gap:4,marginBottom:16,borderBottom:'1px solid var(--border)',paddingBottom:8}}>
+                {[{id:'info',label:'Dane firmy'},{id:'vehicles',label:'Pojazdy'},{id:'drivers',label:'Kierowcy'}].map(t => (
+                  <button key={t.id} className={`btn ${subTab===t.id?'btn-primary':'btn-ghost'}`}
+                    style={{fontSize:12,padding:'5px 14px'}} onClick={()=>setSubTab(t.id)}>{t.label}</button>
+                ))}
+              </div>
+            )}
+            {(subTab === 'info' || !showFleet) && (<>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,marginBottom:16}}>
+              <div>
+                <label>NIP (z prefiksem kraju)</label>
+                <input value={form.vat_number} onChange={e=>u('vat_number',e.target.value.toUpperCase())} placeholder="np. CZ05714907"/>
+              </div>
+              <div style={{alignSelf:'end'}}>
+                <button className="btn btn-primary" onClick={checkVAT} disabled={vatChecking} style={{height:42}}>
+                  {vatChecking ? <div className="spinner" style={{width:14,height:14}}/> : 'Weryfikuj'}
+                </button>
+              </div>
+            </div>
+
+            {vatResult && (
+              <div className={`vat-result ${vatResult.valid?'vat-valid':'vat-invalid'}`}>
+                {vatResult.valid ? 'NIP aktywny: '+vatResult.name : 'NIP nieaktywny lub nieprawidlowy'}
+              </div>
+            )}
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginTop:16}}>
+              <div style={{gridColumn:'1/-1'}}>
+                <label>Nazwa firmy</label>
+                <input value={form.name} onChange={e=>u('name',e.target.value)} placeholder="Nazwa firmy"/>
+              </div>
+              <div>
+                <label>Typ firmy</label>
+                <select value={form.company_type} onChange={e=>u('company_type',e.target.value)}>
+                  <option value="client">Zleceniodawca</option>
+                  <option value="carrier">Transportowiec</option>
+                  <option value="both">Oba</option>
+                </select>
+              </div>
+              <div>
+                <label>Kraj</label>
+                <input value={form.country} onChange={e=>u('country',e.target.value)} placeholder="np. CZ" maxLength={2}/>
+              </div>
+              <div style={{gridColumn:'1/-1'}}>
+                <label>Adres</label>
+                <input value={form.address} onChange={e=>u('address',e.target.value)} placeholder="np. ul. Przykladowa 1"/>
+              </div>
+              <div>
+                <label>Miasto</label>
+                <input value={form.city} onChange={e=>u('city',e.target.value)}/>
+              </div>
+              <div>
+                <label>Kod pocztowy</label>
+                <input value={form.postal_code} onChange={e=>u('postal_code',e.target.value)}/>
+              </div>
+            </div>
+
+            <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:16}}>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--text-dim)',marginBottom:12,textTransform:'uppercase'}}>Kontakt</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+                <div><label>Telefon</label><input value={form.phone} onChange={e=>u('phone',e.target.value)}/></div>
+                <div><label>Email</label><input value={form.email} onChange={e=>u('email',e.target.value)}/></div>
+                <div><label>Osoba kontaktowa</label><input value={form.contact_person} onChange={e=>u('contact_person',e.target.value)}/></div>
+                <div><label>Tel. kontaktowy</label><input value={form.contact_phone} onChange={e=>u('contact_phone',e.target.value)}/></div>
+              </div>
+            </div>
+
+            <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:16}}>
+              <div style={{fontSize:12,fontWeight:700,color:'var(--text-dim)',marginBottom:12,textTransform:'uppercase'}}>Dane bankowe</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+                <div><label>Nazwa banku</label><input value={form.bank_name} onChange={e=>u('bank_name',e.target.value)}/></div>
+                <div><label>Nr konta</label><input value={form.bank_account} onChange={e=>u('bank_account',e.target.value)}/></div>
+                <div><label>Termin platnosci (dni)</label><input type="number" value={form.payment_terms_days} onChange={e=>u('payment_terms_days',e.target.value)}/></div>
+              </div>
+            </div>
+
+            <div style={{marginTop:20}}>
+              <label>Notatki</label>
+              <textarea value={form.notes||''} onChange={e=>u('notes',e.target.value)}/>
+            </div>
+            </>)}
+            {subTab === 'vehicles' && showFleet && <VehiclesPanel companyId={company.id} addToast={addToast}/>}
+            {subTab === 'drivers' && showFleet && <DriversPanel companyId={company.id} addToast={addToast}/>}
+
+            <div style={{marginTop:24,display:'flex',gap:8}}>
+              <button className="btn btn-ghost" onClick={onClose} style={{flex:1,justifyContent:'center'}}>Anuluj</button>
+              <button className="btn btn-green" onClick={handleSave} disabled={saving} style={{flex:1,justifyContent:'center'}}>
+                {saving ? <div className="spinner" style={{width:14,height:14}}/> : null} {isEdit ? 'Zapisz zmiany' : 'Dodaj firme'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== VEHICLES PANEL ====================
+    function VehiclesPanel({ companyId, addToast }) {
+      const [vehicles, setVehicles] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [showAdd, setShowAdd] = useState(false);
+      const [editV, setEditV] = useState(null);
+      const empty = {truck_plate:'',trailer_plate:'',trailer_type:'MONO',adr_class:'',capacity_liters:'',is_food_grade:false,notes:''};
+      const [vf, setVf] = useState(empty);
+
+      const load = useCallback(async () => {
+        setLoading(true);
+        const { data } = await sb.from('vehicles').select('*').eq('company_id', companyId).order('created_at',{ascending:false});
+        setVehicles(data || []);
+        setLoading(false);
+      }, [companyId]);
+      useEffect(() => { load(); }, []);
+
+      const save = async () => {
+        if (!vf.truck_plate) { addToast('Podaj nr rej ciagnika','error'); return; }
+        const p = {...vf, company_id: companyId}; delete p.id; delete p.created_at;
+        let error;
+        if (editV) { ({error} = await sb.from('vehicles').update(p).eq('id', editV.id)); }
+        else { ({error} = await sb.from('vehicles').insert(p)); }
+        if (error) addToast('Blad: '+error.message,'error');
+        else { addToast(editV?'Pojazd zaktualizowany':'Pojazd dodany!','success'); setShowAdd(false); setEditV(null); setVf(empty); load(); }
+      };
+      const del = async (id) => { await sb.from('vehicles').delete().eq('id',id); addToast('Pojazd usuniety','success'); load(); };
+      const uf = (k,v) => setVf(p=>({...p,[k]:v}));
+
+      return (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:14,fontWeight:600}}>Pojazdy ({vehicles.length})</div>
+            <button className="btn btn-primary" onClick={()=>{setEditV(null);setVf(empty);setShowAdd(true)}} style={{fontSize:11,padding:'4px 12px'}}>+ Dodaj pojazd</button>
+          </div>
+          {showAdd && (
+            <div style={{background:'rgba(99,102,241,.05)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:14,marginBottom:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div><label style={{fontSize:11}}>Nr rej. ciagnika *</label><input value={vf.truck_plate} onChange={e=>uf('truck_plate',e.target.value.toUpperCase())} placeholder="WA 12345"/></div>
+                <div><label style={{fontSize:11}}>Nr rej. naczepy</label><input value={vf.trailer_plate} onChange={e=>uf('trailer_plate',e.target.value.toUpperCase())} placeholder="WA 67890"/></div>
+                <div><label style={{fontSize:11}}>Typ naczepy</label>
+                  <select value={vf.trailer_type} onChange={e=>uf('trailer_type',e.target.value)}>
+                    <option value="MONO">Mono (1 komora)</option>
+                    <option value="MULTI">Multi (wiele komor)</option>
+                  </select>
+                </div>
+                <div><label style={{fontSize:11}}>Klasa ADR</label><input value={vf.adr_class} onChange={e=>uf('adr_class',e.target.value)} placeholder="ADR 3,6.1"/></div>
+                <div><label style={{fontSize:11}}>Pojemnosc (L)</label><input type="number" value={vf.capacity_liters} onChange={e=>uf('capacity_liters',e.target.value)} placeholder="34000"/></div>
+                <div style={{display:'flex',alignItems:'end'}}>
+                  <label style={{fontSize:11,display:'flex',alignItems:'center',gap:6}}>
+                    <input type="checkbox" checked={vf.is_food_grade} onChange={e=>uf('is_food_grade',e.target.checked)} style={{width:16,height:16}}/>
+                    Food grade
+                  </label>
+                </div>
+                <div style={{gridColumn:'1/-1'}}><label style={{fontSize:11}}>Notatki</label><input value={vf.notes||''} onChange={e=>uf('notes',e.target.value)}/></div>
+              </div>
+              <div style={{display:'flex',gap:6,marginTop:10}}>
+                <button className="btn btn-ghost" onClick={()=>setShowAdd(false)} style={{fontSize:11,padding:'4px 12px'}}>Anuluj</button>
+                <button className="btn btn-green" onClick={save} style={{fontSize:11,padding:'4px 12px'}}>{editV?'Zapisz':'Dodaj'}</button>
+              </div>
+            </div>
+          )}
+          {loading ? <div style={{textAlign:'center',padding:20}}><div className="spinner"/></div> :
+           vehicles.length === 0 ? <div style={{color:'var(--text-dim)',fontSize:13,textAlign:'center',padding:20}}>Brak pojazdow</div> :
+           <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {vehicles.map(v => (
+              <div key={v.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:'rgba(255,255,255,.02)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,fontSize:13,fontFamily:'JetBrains Mono'}}>{v.truck_plate}{v.trailer_plate?' / '+v.trailer_plate:''}</div>
+                  <div style={{fontSize:11,color:'var(--text-dim)',marginTop:2}}>
+                    {v.trailer_type==='MULTI'?'Multi':'Mono'}
+                    {v.adr_class?' | ADR: '+v.adr_class:''}
+                    {v.capacity_liters?' | '+v.capacity_liters+'L':''}
+                    {v.is_food_grade?' | Food':''}
+                  </div>
+                </div>
+                <button className="btn-icon" onClick={()=>{setEditV(v);setVf({...v});setShowAdd(true)}} style={{fontSize:12}}>E</button>
+                <button className="btn-icon" onClick={()=>del(v.id)} style={{fontSize:12,color:'var(--accent-red)'}}>X</button>
+              </div>
+            ))}
+           </div>
+          }
+        </div>
+      );
+    }
+
+    // ==================== DRIVERS PANEL ====================
+    function DriversPanel({ companyId, addToast }) {
+      const [drivers, setDrivers] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [showAdd, setShowAdd] = useState(false);
+      const [editD, setEditD] = useState(null);
+      const empty = {first_name:'',last_name:'',phone:'',license_number:'',adr_certificate:'',adr_expiry:'',notes:''};
+      const [df, setDf] = useState(empty);
+
+      const load = useCallback(async () => {
+        setLoading(true);
+        const { data } = await sb.from('drivers').select('*').eq('company_id', companyId).order('created_at',{ascending:false});
+        setDrivers(data || []);
+        setLoading(false);
+      }, [companyId]);
+      useEffect(() => { load(); }, []);
+
+      const save = async () => {
+        if (!df.first_name || !df.last_name) { addToast('Podaj imie i nazwisko','error'); return; }
+        const p = {...df, company_id: companyId}; delete p.id; delete p.created_at;
+        let error;
+        if (editD) { ({error} = await sb.from('drivers').update(p).eq('id', editD.id)); }
+        else { ({error} = await sb.from('drivers').insert(p)); }
+        if (error) addToast('Blad: '+error.message,'error');
+        else { addToast(editD?'Kierowca zaktualizowany':'Kierowca dodany!','success'); setShowAdd(false); setEditD(null); setDf(empty); load(); }
+      };
+      const del = async (id) => { await sb.from('drivers').delete().eq('id',id); addToast('Kierowca usuniety','success'); load(); };
+      const uf = (k,v) => setDf(p=>({...p,[k]:v}));
+
+      return (
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+            <div style={{fontSize:14,fontWeight:600}}>Kierowcy ({drivers.length})</div>
+            <button className="btn btn-primary" onClick={()=>{setEditD(null);setDf(empty);setShowAdd(true)}} style={{fontSize:11,padding:'4px 12px'}}>+ Dodaj kierowce</button>
+          </div>
+          {showAdd && (
+            <div style={{background:'rgba(99,102,241,.05)',border:'1px solid var(--border)',borderRadius:'var(--radius)',padding:14,marginBottom:12}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div><label style={{fontSize:11}}>Imie *</label><input value={df.first_name} onChange={e=>uf('first_name',e.target.value)}/></div>
+                <div><label style={{fontSize:11}}>Nazwisko *</label><input value={df.last_name} onChange={e=>uf('last_name',e.target.value)}/></div>
+                <div><label style={{fontSize:11}}>Telefon</label><input value={df.phone} onChange={e=>uf('phone',e.target.value)} placeholder="+48 600 123 456"/></div>
+                <div><label style={{fontSize:11}}>Nr prawa jazdy</label><input value={df.license_number} onChange={e=>uf('license_number',e.target.value)}/></div>
+                <div><label style={{fontSize:11}}>Nr certyfikatu ADR</label><input value={df.adr_certificate} onChange={e=>uf('adr_certificate',e.target.value)}/></div>
+                <div><label style={{fontSize:11}}>Waznosc ADR</label><input type="date" value={df.adr_expiry||''} onChange={e=>uf('adr_expiry',e.target.value)}/></div>
+                <div style={{gridColumn:'1/-1'}}><label style={{fontSize:11}}>Notatki</label><input value={df.notes||''} onChange={e=>uf('notes',e.target.value)}/></div>
+              </div>
+              <div style={{display:'flex',gap:6,marginTop:10}}>
+                <button className="btn btn-ghost" onClick={()=>setShowAdd(false)} style={{fontSize:11,padding:'4px 12px'}}>Anuluj</button>
+                <button className="btn btn-green" onClick={save} style={{fontSize:11,padding:'4px 12px'}}>{editD?'Zapisz':'Dodaj'}</button>
+              </div>
+            </div>
+          )}
+          {loading ? <div style={{textAlign:'center',padding:20}}><div className="spinner"/></div> :
+           drivers.length === 0 ? <div style={{color:'var(--text-dim)',fontSize:13,textAlign:'center',padding:20}}>Brak kierowcow</div> :
+           <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {drivers.map(d => (
+              <div key={d.id} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:'rgba(255,255,255,.02)',borderRadius:'var(--radius)',border:'1px solid var(--border)'}}>
+                <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#a855f7)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,flexShrink:0}}>
+                  {(d.first_name||'')[0]}{(d.last_name||'')[0]}
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:600,fontSize:13}}>{d.first_name} {d.last_name}</div>
+                  <div style={{fontSize:11,color:'var(--text-dim)',marginTop:2}}>
+                    {d.phone||''}
+                    {d.adr_certificate?' | ADR: '+d.adr_certificate:''}
+                    {d.adr_expiry?' (do '+d.adr_expiry+')':''}
+                  </div>
+                </div>
+                <button className="btn-icon" onClick={()=>{setEditD(d);setDf({...d});setShowAdd(true)}} style={{fontSize:12}}>E</button>
+                <button className="btn-icon" onClick={()=>del(d.id)} style={{fontSize:12,color:'var(--accent-red)'}}>X</button>
+              </div>
+            ))}
+           </div>
+          }
+        </div>
+      );
+    }
+
+    // ==================== TEAM USERS ====================
+    const TEAM_USERS = [
+      { id: 'kuba', name: 'Kuba', email: 'chemicals@route11.eu', phone: '+48605067793' },
+      { id: 'ania', name: 'Ania', email: 'orders@route11.eu', phone: '+48505265276' },
+      { id: 'patryk', name: 'Patryk', email: 'office@route11.eu', phone: '+48889379687' },
+      { id: 'marcin', name: 'Marcin', email: 'dispo27@route11.eu', phone: '+48572700200' },
+    ];
+    const PLANNING_EMAIL = 'planning@route11.eu';
+
+    // ==================== PDF TRANSLATIONS ====================
+    const PDF_I18N = {
+      en: { title:'TRANSPORT ORDER',client:'CLIENT',carrier:'CARRIER',loading:'LOADING',unloading:'UNLOADING',cargo:'CARGO',vehicle:'VEHICLE',driver:'DRIVER',financial:'FINANCIAL TERMS',special:'SPECIAL CONDITIONS',vat:'VAT',phone:'Phone',email:'Email',date:'Date',ref:'Ref',description:'Description',weight:'Weight',volume:'Vol',adr:'ADR class',truck:'Truck',trailer:'Trailer',freight:'Freight',paymentDays:'Payment terms',days:'days',net:'net',generated:'Generated' },
+      pl: { title:'ZLECENIE TRANSPORTOWE',client:'ZLECENIODAWCA',carrier:'PRZEWOZNIK',loading:'ZALADUNEK',unloading:'ROZLADUNEK',cargo:'TOWAR',vehicle:'POJAZD',driver:'KIEROWCA',financial:'WARUNKI FINANSOWE',special:'WARUNKI SPECJALNE',vat:'NIP',phone:'Tel',email:'Email',date:'Data',ref:'Ref',description:'Opis',weight:'Waga',volume:'Obj',adr:'ADR klasa',truck:'Ciagnik',trailer:'Naczepa',freight:'Fracht',paymentDays:'Termin platnosci',days:'dni',net:'netto',generated:'Wygenerowano' },
+      cz: { title:'PREPRAVNI OBJEDNAVKA',client:'OBJEDNAVATEL',carrier:'DOPRAVCE',loading:'NAKLADKA',unloading:'VYKLADKA',cargo:'ZBOZI',vehicle:'VOZIDLO',driver:'RIDIC',financial:'FINANCNI PODMINKY',special:'ZVLASTNI PODMINKY',vat:'DIC',phone:'Tel',email:'Email',date:'Datum',ref:'Ref',description:'Popis',weight:'Hmotnost',volume:'Objem',adr:'ADR trida',truck:'Tahac',trailer:'Naves',freight:'Prepravne',paymentDays:'Splatnost',days:'dnu',net:'netto',generated:'Vygenerovano' },
+      de: { title:'TRANSPORTAUFTRAG',client:'AUFTRAGGEBER',carrier:'FRACHTFUHRER',loading:'BELADUNG',unloading:'ENTLADUNG',cargo:'WARE',vehicle:'FAHRZEUG',driver:'FAHRER',financial:'FINANZBEDINGUNGEN',special:'SONDERBEDINGUNGEN',vat:'USt-IdNr',phone:'Tel',email:'Email',date:'Datum',ref:'Ref',description:'Beschreibung',weight:'Gewicht',volume:'Vol',adr:'ADR Klasse',truck:'LKW',trailer:'Auflieger',freight:'Fracht',paymentDays:'Zahlungsziel',days:'Tage',net:'netto',generated:'Erstellt' },
+      es: { title:'ORDEN DE TRANSPORTE',client:'CLIENTE',carrier:'TRANSPORTISTA',loading:'CARGA',unloading:'DESCARGA',cargo:'MERCANCIA',vehicle:'VEHICULO',driver:'CONDUCTOR',financial:'CONDICIONES FINANCIERAS',special:'CONDICIONES ESPECIALES',vat:'NIF',phone:'Tel',email:'Email',date:'Fecha',ref:'Ref',description:'Descripcion',weight:'Peso',volume:'Vol',adr:'ADR clase',truck:'Camion',trailer:'Semirremolque',freight:'Flete',paymentDays:'Plazo de pago',days:'dias',net:'neto',generated:'Generado' },
+      it: { title:'ORDINE DI TRASPORTO',client:'COMMITTENTE',carrier:'VETTORE',loading:'CARICO',unloading:'SCARICO',cargo:'MERCE',vehicle:'VEICOLO',driver:'AUTISTA',financial:'CONDIZIONI FINANZIARIE',special:'CONDIZIONI SPECIALI',vat:'P.IVA',phone:'Tel',email:'Email',date:'Data',ref:'Rif',description:'Descrizione',weight:'Peso',volume:'Vol',adr:'ADR classe',truck:'Motrice',trailer:'Rimorchio',freight:'Nolo',paymentDays:'Termini di pagamento',days:'giorni',net:'netto',generated:'Generato' },
+      fr: { title:'ORDRE DE TRANSPORT',client:'DONNEUR D ORDRE',carrier:'TRANSPORTEUR',loading:'CHARGEMENT',unloading:'DECHARGEMENT',cargo:'MARCHANDISE',vehicle:'VEHICULE',driver:'CHAUFFEUR',financial:'CONDITIONS FINANCIERES',special:'CONDITIONS SPECIALES',vat:'TVA',phone:'Tel',email:'Email',date:'Date',ref:'Ref',description:'Description',weight:'Poids',volume:'Vol',adr:'ADR classe',truck:'Tracteur',trailer:'Remorque',freight:'Fret',paymentDays:'Delai de paiement',days:'jours',net:'net',generated:'Genere' },
+      sk: { title:'PREPRAVNA OBJEDNAVKA',client:'OBJEDNAVATEL',carrier:'DOPRAVCA',loading:'NAKLADKA',unloading:'VYKLADKA',cargo:'TOVAR',vehicle:'VOZIDLO',driver:'VODIC',financial:'FINANCNE PODMIENKY',special:'ZVLASTNE PODMIENKY',vat:'DIC',phone:'Tel',email:'Email',date:'Datum',ref:'Ref',description:'Popis',weight:'Hmotnost',volume:'Objem',adr:'ADR trieda',truck:'Tahac',trailer:'Naves',freight:'Prepravne',paymentDays:'Splatnost',days:'dni',net:'netto',generated:'Vygenerovane' },
+    };
+
+    function getCarrierLang(countryCode) {
+      const map = { PL:'pl', CZ:'cz', SK:'sk', DE:'de', AT:'de', CH:'de', ES:'es', IT:'it', FR:'fr', BE:'fr', NL:'en', GB:'en', IE:'en', SE:'en', DK:'en', NO:'en', FI:'en', HU:'en', RO:'en', BG:'en', HR:'en', SI:'en', LT:'en', LV:'en', EE:'en', PT:'es' };
+      return map[(countryCode||'').toUpperCase()] || 'en';
+    }
+
+    // ==================== ORDERS MODULE (Etap 3 - z filtrami) ====================
+    function OrdersModule({ addToast, onStatsChange, currentUser }) {
+      const [view, setView] = useState('list');
+      const [orders, setOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [ocrData, setOcrData] = useState(null);
+      const [editingOrder, setEditingOrder] = useState(null);
+      const [search, setSearch] = useState('');
+      const [statusFilter, setStatusFilter] = useState('all');
+      const [detailOrder, setDetailOrder] = useState(null);
+
+      const fetchOrders = useCallback(async () => {
+        setLoading(true);
+        const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending: false });
+        if (error) addToast('Blad ladowania zlecen: ' + error.message, 'error');
+        else {
+          // Map DB columns to frontend fields
+          const mapped = (data||[]).map(o => ({...o,
+            price_carrier: o.price_carrier || o.price_buy || null,
+            driver_document: o.driver_document || o.driver_id_number || null,
+          }));
+          setOrders(mapped);
+        }
+        setLoading(false);
+      }, []);
+
+      useEffect(() => { fetchOrders(); }, []);
+
+      const filtered = useMemo(() => {
+        return orders.filter(o => {
+          const q = search.toLowerCase();
+          const matchSearch = !q || (o.order_number||'').toLowerCase().includes(q) ||
+            (o.client_name||'').toLowerCase().includes(q) || (o.carrier_name||'').toLowerCase().includes(q) ||
+            (o.loading_city||'').toLowerCase().includes(q) || (o.unloading_city||'').toLowerCase().includes(q) ||
+            (o.route_description||'').toLowerCase().includes(q);
+          const matchStatus = statusFilter === 'all' || o.status === statusFilter;
+          return matchSearch && matchStatus;
+        });
+      }, [orders, search, statusFilter]);
+
+      const handleStatusChange = async (orderId, newStatus) => {
+        const { error } = await sb.from('orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', orderId);
+        if (error) { addToast('Blad zmiany statusu: ' + error.message, 'error'); return; }
+        addToast('Status zmieniony na: ' + statusLabel(newStatus), 'success');
+        fetchOrders();
+        // Auto-generate notification
+        const order = orders.find(o => o.id === orderId);
+        const notifData = getNotificationsForStatusChange(newStatus, order);
+        for (const n of notifData) {
+          await sb.from('notifications').insert(n);
+        }
+      };
+
+      const handleOCRResult = (data) => { setOcrData(data); setView('form'); };
+      const handleFormSave = () => { setView('list'); setOcrData(null); setEditingOrder(null); fetchOrders(); onStatsChange(); };
+      const handleFormCancel = () => { setView('list'); setOcrData(null); setEditingOrder(null); };
+
+      if (view === 'upload') return <OrderUpload addToast={addToast} onResult={handleOCRResult} onCancel={() => setView('list')}/>;
+      if (view === 'form') return <OrderForm addToast={addToast} ocrData={ocrData} editOrder={editingOrder} onSave={handleFormSave} onCancel={handleFormCancel} currentUser={currentUser}/>;
+      if (detailOrder) return <OrderDetail order={detailOrder} addToast={addToast} onBack={() => { setDetailOrder(null); fetchOrders(); }} onEdit={(o) => { setDetailOrder(null); setEditingOrder(o); setView('form'); }}/>;
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+            <h2 style={{fontSize:22,fontWeight:700,flex:1}}>Zlecenia Transportowe</h2>
+            <button className="btn btn-green" onClick={() => setView('upload')}>+ Nowe zlecenie</button>
+          </div>
+
+          {/* Filters */}
+          <div className="filter-bar">
+            <input placeholder="Szukaj zlecen..." value={search} onChange={e=>setSearch(e.target.value)} style={{flex:1,minWidth:200}}/>
+            <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+              <option value="all">Wszystkie statusy</option>
+              {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+            </select>
+            {(search || statusFilter !== 'all') && (
+              <button className="btn btn-ghost btn-sm" onClick={()=>{setSearch('');setStatusFilter('all')}}>Reset</button>
+            )}
+            <span style={{color:'var(--text-muted)',fontSize:12}}>{filtered.length} z {orders.length}</span>
+          </div>
+
+          <div className="card" style={{padding:0,overflow:'hidden'}}>
+            {loading ? (
+              <div style={{padding:40,textAlign:'center',color:'var(--text-muted)'}}>Ladowanie...</div>
+            ) : orders.length === 0 ? (
+              <div style={{padding:60,textAlign:'center'}}>
+                <p style={{color:'var(--text-dim)',marginBottom:8}}>Brak zlecen - uploaduj pierwsze zlecenie klienta!</p>
+                <button className="btn btn-primary" onClick={() => setView('upload')} style={{marginTop:12}}>Upload zlecenia</button>
+              </div>
+            ) : (
+              <div style={{overflowX:'auto'}}>
+                <table className="tbl">
+                  <thead><tr>
+                    <th>Nr zlecenia</th><th>Trasa</th><th>Klient</th><th>Przewoznik</th><th>Osoba</th>
+                    <th>Status</th><th>Data zalad.</th><th>Cena klienta</th><th>Cena przewoz.</th><th>Marza</th><th>Akcje</th>
+                  </tr></thead>
+                  <tbody>
+                    {filtered.map(o => {
+                      const priceClient = parseFloat(o.price_amount) || 0;
+                      const priceCarrier = parseFloat(o.price_carrier) || 0;
+                      const margin = priceClient - priceCarrier;
+                      const marginPct = priceClient > 0 ? ((margin / priceClient) * 100).toFixed(0) : 0;
+                      return (
+                      <tr key={o.id} style={{cursor:'pointer'}} onClick={()=>setDetailOrder(o)}>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,fontWeight:600}}>{o.order_number}</td>
+                        <td style={{fontSize:13}}>{o.route_description || '---'}</td>
+                        <td style={{fontSize:12}}>{o.client_name || '---'}</td>
+                        <td style={{fontSize:12}}>{o.carrier_name || <span style={{color:'var(--accent-orange)'}}>Przypisz</span>}</td>
+                        <td style={{fontSize:11}}>{(() => { const u = TEAM_USERS.find(t=>t.id===o.assigned_user); return u ? u.name : <span style={{color:'var(--text-dim)'}}>---</span>; })()}</td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          <select value={o.status||'draft'} onChange={e=>handleStatusChange(o.id, e.target.value)}
+                            style={{padding:'2px 6px',fontSize:11,width:'auto',minWidth:100,background:'transparent',border:'1px solid var(--border)',borderRadius:12,color:'var(--text)'}}>
+                            {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
+                          </select>
+                        </td>
+                        <td style={{fontSize:12}}>{o.loading_date ? new Date(o.loading_date).toLocaleDateString('pl') : '---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{priceClient ? `${priceClient} ${o.price_currency||'EUR'}` : '---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{priceCarrier ? `${priceCarrier} ${o.price_currency||'EUR'}` : '---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,color: margin > 0 ? 'var(--accent-green)' : margin < 0 ? 'var(--accent-red)' : 'var(--text-dim)'}}>
+                          {priceClient && priceCarrier ? `${margin} (${marginPct}%)` : '---'}
+                        </td>
+                        <td onClick={e=>e.stopPropagation()}>
+                          <div style={{display:'flex',gap:4}}>
+                            <button className="btn-icon" title="Edytuj" onClick={() => { setEditingOrder(o); setView('form'); }}>E</button>
+                            <button className="btn-icon" title="PDF" onClick={() => generateTransportOrderPDF(o, addToast)}>P</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )})}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== ORDER DETAIL VIEW (Etap 3) ====================
+    function OrderDetail({ order, addToast, onBack, onEdit }) {
+      const [tab, setTab] = useState('dane');
+      const [o, setO] = useState(order);
+      const [docs, setDocs] = useState([]);
+      const [docsLoading, setDocsLoading] = useState(false);
+      const [uploading, setUploading] = useState(false);
+
+      const loadDocs = useCallback(async () => {
+        setDocsLoading(true);
+        try {
+          // Load from Supabase order_documents
+          const { data } = await sb.from('order_documents').select('*').eq('order_id', o.id).order('created_at', { ascending: false });
+          setDocs(data || []);
+        } catch(e) { console.error('Docs load error:', e); }
+        setDocsLoading(false);
+      }, [o.id]);
+
+      useEffect(() => { if (tab === 'dokumenty') loadDocs(); }, [tab]);
+
+      const createDriveFolder = async () => {
+        try {
+          const resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'createFolder', orderNumber: o.order_number })
+          });
+          const result = await resp.json();
+          if (result.folderId) {
+            await sb.from('orders').update({ drive_folder_id: result.folderId }).eq('id', o.id);
+            setO(prev => ({...prev, drive_folder_id: result.folderId}));
+            addToast(result.created ? 'Folder Drive utworzony!' : 'Folder Drive juz istnieje', 'success');
+          }
+          return result;
+        } catch(e) { addToast('Blad tworzenia folderu: ' + e.message, 'error'); return null; }
+      };
+
+      const uploadDocToDrive = async (file, docType) => {
+        setUploading(true);
+        try {
+          let folderId = o.drive_folder_id;
+          if (!folderId) {
+            const folderResult = await createDriveFolder();
+            if (!folderResult?.folderId) { setUploading(false); return; }
+            folderId = folderResult.folderId;
+          }
+          const base64 = await new Promise((ok, fail) => {
+            const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.onerror = fail; r.readAsDataURL(file);
+          });
+          const resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'upload', folderId, fileName: file.name, mimeType: file.type, base64Content: base64, documentType: docType })
+          });
+          const result = await resp.json();
+          if (result.fileId) {
+            await sb.from('order_documents').insert({
+              order_id: o.id, document_type: docType, file_name: file.name,
+              file_url: result.fileUrl, drive_file_id: result.fileId, drive_folder_id: folderId,
+              uploaded_by: 'user:dashboard'
+            });
+            addToast('Dokument wgrany!', 'success');
+            loadDocs();
+          }
+        } catch(e) { addToast('Blad uploadu: ' + e.message, 'error'); }
+        setUploading(false);
+      };
+
+      const sendCMRRequest = async () => {
+        if (!o.carrier_email) { addToast('Brak emaila przewoznika!', 'error'); return; }
+        try {
+          const tokenResp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'generateUploadToken', orderNumber: o.order_number, documentType: 'cmr' })
+          });
+          const tokenResult = await tokenResp.json();
+          const assignedUser = TEAM_USERS.find(u => u.id === o.assigned_user);
+          await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'sendEmail',
+              to: o.carrier_email,
+              cc: (assignedUser?.email || '') + ',' + PLANNING_EMAIL,
+              subject: 'CMR Request - ' + o.order_number + ' - Route 11',
+              htmlBody: `<div style="font-family:Arial;max-width:600px;margin:0 auto"><div style="background:#0c0e14;padding:20px;text-align:center"><h1 style="color:#3b82f6;margin:0">ROUTE11</h1></div><div style="padding:24px;background:#f8f9fa"><p>Dear ${o.carrier_name||'Partner'},</p><p>Please upload the CMR document for transport order <b>${o.order_number}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${tokenResult.uploadUrl}" style="background:#3b82f6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Upload CMR Document</a></div><p style="color:#666;font-size:13px">This link is valid for 72 hours.</p></div></div>`,
+              textBody: 'Please upload CMR for order ' + o.order_number
+            })
+          });
+          addToast('Prośba o CMR wysłana do ' + o.carrier_email + '!', 'success');
+        } catch(e) { addToast('Blad wysylki: ' + e.message, 'error'); }
+      };
+
+      const priceClient = parseFloat(o.price_amount) || 0;
+      const priceCarrier = parseFloat(o.price_carrier) || 0;
+      const margin = priceClient - priceCarrier;
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>Wroc</button>
+            <h2 style={{fontSize:20,fontWeight:700,flex:1}}>{o.order_number} | {o.route_description || 'Brak trasy'}</h2>
+            <span className={`badge ${statusBadge(o.status)}`}>{statusLabel(o.status)}</span>
+            <button className="btn btn-primary btn-sm" onClick={()=>onEdit(o)}>Edytuj</button>
+            <button className="btn btn-ghost btn-sm" onClick={()=>generateTransportOrderPDF(o, addToast)}>PDF</button>
+          </div>
+
+          <div className="tab-bar">
+            {['dane','dokumenty','finanse','timeline'].map(t => (
+              <button key={t} className={`tab-btn ${tab===t?'active':''}`} onClick={()=>setTab(t)}>
+                {({dane:'Dane',dokumenty:`Dokumenty (${docs.length})`,finanse:'Finanse',timeline:'Timeline'})[t]}
+              </button>
+            ))}
+          </div>
+
+          {tab === 'dane' && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+              <div className="card">
+                <h4 style={{color:'var(--accent-blue)',marginBottom:12,fontSize:13,textTransform:'uppercase'}}>Zleceniodawca</h4>
+                <p style={{fontWeight:600,marginBottom:4}}>{o.client_name || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>NIP: {o.client_vat || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>{o.client_address} {o.client_city} {o.client_country}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>Tel: {o.client_phone || '---'} | Email: {o.client_email || '---'}</p>
+              </div>
+              <div className="card">
+                <h4 style={{color:'var(--accent-orange)',marginBottom:12,fontSize:13,textTransform:'uppercase'}}>Przewoznik</h4>
+                <p style={{fontWeight:600,marginBottom:4}}>{o.carrier_name || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>NIP: {o.carrier_vat || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>{o.carrier_address} {o.carrier_city} {o.carrier_country}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>Tel: {o.carrier_phone || '---'} | Email: {o.carrier_email || '---'}</p>
+              </div>
+              <div className="card">
+                <h4 style={{color:'var(--accent-green)',marginBottom:12,fontSize:13,textTransform:'uppercase'}}>Zaladunek</h4>
+                <p style={{fontWeight:600}}>{o.loading_company || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>{o.loading_address}, {o.loading_city} {o.loading_country}</p>
+                <p style={{fontSize:12}}>Data: {o.loading_date || '---'} {o.loading_time_from||''}{o.loading_time_to?'-'+o.loading_time_to:''}</p>
+              </div>
+              <div className="card">
+                <h4 style={{color:'var(--accent-red)',marginBottom:12,fontSize:13,textTransform:'uppercase'}}>Rozladunek</h4>
+                <p style={{fontWeight:600}}>{o.unloading_company || '---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>{o.unloading_address}, {o.unloading_city} {o.unloading_country}</p>
+                <p style={{fontSize:12}}>Data: {o.unloading_date || '---'} {o.unloading_time_from||''}{o.unloading_time_to?'-'+o.unloading_time_to:''}</p>
+              </div>
+              <div className="card" style={{gridColumn:'1/-1'}}>
+                <h4 style={{color:'var(--accent-orange)',marginBottom:12,fontSize:13,textTransform:'uppercase'}}>Towar</h4>
+                <p>{o.cargo_description || '---'} | Waga: {o.cargo_weight || '---'} kg</p>
+                {o.cargo_adr && <p style={{color:'var(--accent-red)'}}>ADR: klasa {o.cargo_adr}</p>}
+              </div>
+              {o.special_conditions && (
+                <div className="card" style={{gridColumn:'1/-1'}}>
+                  <h4 style={{color:'var(--text-dim)',marginBottom:8,fontSize:13,textTransform:'uppercase'}}>Warunki specjalne</h4>
+                  <p style={{fontSize:13,whiteSpace:'pre-wrap'}}>{o.special_conditions}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === 'finanse' && (
+            <div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,marginBottom:20}}>
+                <div className="stat-card" style={{background:'rgba(59,130,246,.05)'}}>
+                  <div className="value" style={{color:'var(--accent-blue)'}}>{priceClient || '---'}</div>
+                  <div className="label">Cena klienta ({o.price_currency||'EUR'})</div>
+                </div>
+                <div className="stat-card" style={{background:'rgba(245,158,11,.05)'}}>
+                  <div className="value" style={{color:'var(--accent-orange)'}}>{priceCarrier || '---'}</div>
+                  <div className="label">Cena przewoznika ({o.price_currency||'EUR'})</div>
+                </div>
+                <div className="stat-card" style={{background: margin >= 0 ? 'rgba(34,197,94,.05)' : 'rgba(239,68,68,.05)'}}>
+                  <div className="value" style={{color: margin >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}}>{priceClient && priceCarrier ? margin : '---'}</div>
+                  <div className="label">Marza ({o.price_currency||'EUR'})</div>
+                </div>
+              </div>
+              <div className="card">
+                <h4 style={{marginBottom:12,fontSize:13,textTransform:'uppercase',color:'var(--text-dim)'}}>Termin platnosci</h4>
+                <p>Przewoznik: {o.carrier_payment_days || o.payment_terms_days || 30} dni</p>
+              </div>
+            </div>
+          )}
+
+          {tab === 'dokumenty' && (
+            <div>
+              <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
+                <button className="btn btn-primary btn-sm" onClick={createDriveFolder} disabled={!!o.drive_folder_id}>
+                  {o.drive_folder_id ? '\u2705 Folder Drive' : '\ud83d\udcc1 Utwórz folder Drive'}
+                </button>
+                {o.drive_folder_id && (
+                  <a href={`https://drive.google.com/drive/folders/${o.drive_folder_id}`} target="_blank" className="btn btn-ghost btn-sm">Otwórz na Drive</a>
+                )}
+                <button className="btn btn-sm" style={{background:'var(--accent-orange)',color:'#fff'}} onClick={sendCMRRequest}>\ud83d\udce7 Wyślij prośbę o CMR</button>
+                {o.carrier_phone && (
+                  <a href={`https://wa.me/${(o.carrier_phone||'').replace(/[^0-9+]/g,'')}?text=${encodeURIComponent('Dear '+( o.carrier_name||'Partner')+', please send CMR for order '+o.order_number)}`} target="_blank" className="btn btn-sm" style={{background:'#25d366',color:'#fff'}}>WhatsApp CMR</a>
+                )}
+              </div>
+
+              <div className="card" style={{marginBottom:16}}>
+                <h4 style={{marginBottom:12,fontSize:13,textTransform:'uppercase',color:'var(--text-dim)'}}>Wgraj dokument</h4>
+                <div style={{border:'2px dashed var(--border)',borderRadius:12,padding:20,textAlign:'center',cursor:'pointer'}} onClick={()=>document.getElementById('doc-upload-input').click()}
+                  onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent-blue)'}} onDragLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+                  onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--border)';if(e.dataTransfer.files[0])uploadDocToDrive(e.dataTransfer.files[0],'other')}}>
+                  {uploading ? <span>Wysylanie...</span> : <span>\ud83d\udcc4 Przeciagnij plik lub kliknij (PDF, JPG, PNG)</span>}
+                </div>
+                <input type="file" id="doc-upload-input" style={{display:'none'}} accept=".pdf,.jpg,.jpeg,.png" onChange={e=>{if(e.target.files[0]){const t=prompt('Typ dokumentu:\n1=CMR\n2=Faktura\n3=List przewozowy\n4=Inny','1');const typeMap={'1':'cmr','2':'invoice','3':'waybill','4':'other'};uploadDocToDrive(e.target.files[0],typeMap[t]||'other');e.target.value=''}}}/>
+              </div>
+
+              <div className="card">
+                <h4 style={{marginBottom:12,fontSize:13,textTransform:'uppercase',color:'var(--text-dim)'}}>Dokumenty ({docs.length})</h4>
+                {docsLoading ? <p style={{color:'var(--text-dim)'}}>Ladowanie...</p> : docs.length === 0 ? <p style={{color:'var(--text-dim)'}}>Brak dokumentow</p> : (
+                  <table className="tbl">
+                    <thead><tr><th>Typ</th><th>Nazwa</th><th>Kto wgral</th><th>Data</th><th>Akcje</th></tr></thead>
+                    <tbody>
+                      {docs.map(d => (
+                        <tr key={d.id}>
+                          <td><span style={{fontSize:11,padding:'2px 8px',borderRadius:10,background:({cmr:'rgba(34,197,94,.1)',invoice:'rgba(168,85,247,.1)',waybill:'rgba(59,130,246,.1)'})[d.document_type]||'rgba(100,100,100,.1)',color:({cmr:'var(--accent-green)',invoice:'#a855f7',waybill:'var(--accent-blue)'})[d.document_type]||'var(--text-dim)'}}>{(d.document_type||'other').toUpperCase()}</span></td>
+                          <td style={{fontSize:12}}>{d.file_name}</td>
+                          <td style={{fontSize:11,color:'var(--text-dim)'}}>{d.uploaded_by || '---'}</td>
+                          <td style={{fontSize:11,color:'var(--text-dim)'}}>{d.created_at ? new Date(d.created_at).toLocaleDateString('pl') : '---'}</td>
+                          <td>{d.file_url && <a href={d.file_url} target="_blank" style={{color:'var(--accent-blue)',fontSize:12}}>Pobierz</a>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {tab === 'timeline' && (
+            <div className="card">
+              <h4 style={{marginBottom:16,fontSize:13,textTransform:'uppercase',color:'var(--text-dim)'}}>Historia zlecenia</h4>
+              <div style={{borderLeft:'2px solid var(--border)',paddingLeft:20,marginLeft:8}}>
+                <TimelineItem done label="Zlecenie utworzone" date={o.created_at}/>
+                <TimelineItem done={!!o.carrier_name} label="Przewoznik przypisany" info={o.carrier_name}/>
+                <TimelineItem done={o.status==='confirmed'||o.status==='loading'||o.status==='in_transit'||o.status==='delivered'||o.status==='cmr_received'||o.status==='invoiced'||o.status==='paid'} label="Potwierdzenie"/>
+                <TimelineItem done={o.status==='loading'||o.status==='in_transit'||o.status==='delivered'||o.status==='cmr_received'||o.status==='invoiced'||o.status==='paid'} label="Zaladunek" date={o.loading_date}/>
+                <TimelineItem done={o.status==='in_transit'||o.status==='delivered'||o.status==='cmr_received'||o.status==='invoiced'||o.status==='paid'} label="W transporcie"/>
+                <TimelineItem done={o.status==='delivered'||o.status==='cmr_received'||o.status==='invoiced'||o.status==='paid'} label="Dostarczone" date={o.unloading_date}/>
+                <TimelineItem done={o.status==='cmr_received'||o.status==='invoiced'||o.status==='paid'} label="CMR odebrano" info={docs.find(d=>d.document_type==='cmr')?.file_name}/>
+                <TimelineItem done={o.status==='invoiced'||o.status==='paid'} label="Faktura wystawiona"/>
+                <TimelineItem done={o.status==='paid'} label="Zaplacone"/>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function TimelineItem({ done, label, date, info }) {
+      return (
+        <div style={{marginBottom:16,position:'relative'}}>
+          <div style={{position:'absolute',left:-27,top:2,width:12,height:12,borderRadius:'50%',background:done?'var(--accent-green)':'var(--border)',border:'2px solid var(--bg-card)'}}/>
+          <div style={{fontSize:14,fontWeight:done?600:400,color:done?'var(--text)':'var(--text-muted)'}}>{done?'\u2705':'\u2b1c'} {label}</div>
+          {date && <div style={{fontSize:11,color:'var(--text-dim)'}}>{new Date(date).toLocaleDateString('pl')}</div>}
+          {info && <div style={{fontSize:12,color:'var(--accent-blue)'}}>{info}</div>}
+        </div>
+      );
+    }
+
+    // ==================== ORDER UPLOAD (OCR) ====================
+    function OrderUpload({ addToast, onResult, onCancel }) {
+      const [dragging, setDragging] = useState(false);
+      const [processing, setProcessing] = useState(false);
+      const [progress, setProgress] = useState('');
+      const fileRef = useRef(null);
+
+      const processFile = async (file) => {
+        if (!file) return;
+        if (file.size > 10*1024*1024) { addToast('Plik za duzy (max 10MB)', 'error'); return; }
+        const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+        if (!allowed.includes(file.type)) { addToast('Format: PDF, JPG, PNG lub WebP', 'error'); return; }
+
+        setProcessing(true);
+        setProgress('Konwertowanie pliku...');
+        try {
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.readAsDataURL(file);
+          });
+
+          setProgress('Wysylanie do Gemini Flash...');
+          const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+          const r = await fetch(geminiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [
+                { inlineData: { mimeType: file.type, data: base64 } },
+                { text: OCR_PROMPT }
+              ]}],
+              generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: 'application/json' }
+            })
+          });
+
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Gemini HTTP ${r.status}`);
+          }
+
+          setProgress('Analizowanie odpowiedzi AI...');
+          const geminiResult = await r.json();
+          const text = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) throw new Error('Pusta odpowiedz Gemini');
+
+          const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const parsed = JSON.parse(clean);
+
+          setProgress('Dane wyciagniete!');
+          addToast('Zlecenie zparsowane przez AI!', 'success');
+          setTimeout(() => onResult(parsed), 500);
+        } catch (err) {
+          addToast('Blad OCR: ' + err.message, 'error');
+          setProcessing(false);
+          setProgress('');
+        }
+      };
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+            <button className="btn btn-ghost btn-sm" onClick={onCancel}>Wroc</button>
+            <h2 style={{fontSize:22,fontWeight:700}}>Upload zlecenia klienta</h2>
+          </div>
+
+          <div className="card" style={{textAlign:'center',padding:'60px 40px'}}>
+            {processing ? (
+              <div>
+                <div className="spinner" style={{width:40,height:40,margin:'0 auto 20px',borderWidth:3}}/>
+                <p style={{fontSize:16,fontWeight:600,marginBottom:8}}>{progress}</p>
+                <p style={{color:'var(--text-dim)',fontSize:13}}>Gemini Flash analizuje dokument...</p>
+              </div>
+            ) : (
+              <div
+                onDrop={e=>{e.preventDefault();setDragging(false);processFile(e.dataTransfer.files[0])}}
+                onDragOver={e=>{e.preventDefault();setDragging(true)}}
+                onDragLeave={()=>setDragging(false)}
+                onClick={()=>fileRef.current?.click()}
+                style={{
+                  border:`2px dashed ${dragging?'var(--accent-blue)':'var(--border)'}`,
+                  borderRadius:'var(--radius-lg)',padding:'60px 40px',cursor:'pointer',
+                  transition:'all .3s',background:dragging?'rgba(59,130,246,.05)':'transparent'
+                }}
+              >
+                <div style={{fontSize:64,marginBottom:16}}>Upload</div>
+                <p style={{fontSize:18,fontWeight:600,marginBottom:8}}>Przeciagnij zlecenie klienta</p>
+                <p style={{color:'var(--text-dim)',fontSize:14,marginBottom:20}}>lub kliknij zeby wybrac plik</p>
+                <p style={{color:'var(--text-muted)',fontSize:12}}>PDF, JPG, PNG, WebP - max 10MB</p>
+                <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" style={{display:'none'}}
+                  onChange={e=>processFile(e.target.files[0])}/>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== ORDER FORM ====================
+    // ==================== COMPANY SELECT DROPDOWN ====================
+    function CompanySelect({ label, filterType, value, onSelect, addToast }) {
+      const [companies, setCompanies] = useState([]);
+      const [search, setSearch] = useState(value || '');
+      const [open, setOpen] = useState(false);
+      const [loading, setLoading] = useState(false);
+      const ref = useRef(null);
+
+      useEffect(() => {
+        (async () => {
+          setLoading(true);
+          let q = sb.from('companies').select('*').order('name');
+          if (filterType === 'client') q = q.in('company_type', ['client','both']);
+          if (filterType === 'carrier') q = q.in('company_type', ['carrier','both']);
+          const { data } = await q;
+          setCompanies(data || []);
+          setLoading(false);
+        })();
+      }, [filterType]);
+
+      useEffect(() => { setSearch(value || ''); }, [value]);
+
+      // Close on outside click
+      useEffect(() => {
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+      }, []);
+
+      const filtered = companies.filter(c => {
+        const q = search.toLowerCase();
+        return !q || c.name.toLowerCase().includes(q) || (c.vat_number||'').toLowerCase().includes(q) || (c.city||'').toLowerCase().includes(q);
+      });
+
+      return (
+        <div ref={ref} style={{position:'relative'}}>
+          <label>{label}</label>
+          <input
+            value={search}
+            onChange={e => { setSearch(e.target.value); setOpen(true); onSelect(null, e.target.value); }}
+            onFocus={() => setOpen(true)}
+            placeholder="Wpisz nazwe lub NIP, albo wybierz z listy..."
+          />
+          {open && (
+            <div style={{
+              position:'absolute', top:'100%', left:0, right:0, maxHeight:220, overflowY:'auto',
+              background:'var(--bg-card)', border:'1px solid var(--border)', borderRadius:'0 0 var(--radius) var(--radius)',
+              zIndex:50, boxShadow:'var(--shadow)'
+            }}>
+              {loading ? <div style={{padding:12,color:'var(--text-muted)',fontSize:12}}>Ladowanie...</div> : 
+               filtered.length === 0 ? <div style={{padding:12,color:'var(--text-muted)',fontSize:12}}>Brak wynikow (wpisz dane recznie)</div> :
+               filtered.slice(0,8).map(c => (
+                <div key={c.id} onClick={() => { onSelect(c); setSearch(c.name); setOpen(false); }}
+                  style={{padding:'10px 14px',cursor:'pointer',borderBottom:'1px solid var(--border)',fontSize:13,transition:'background .15s'}}
+                  onMouseEnter={e => e.target.style.background='var(--bg-card-hover)'}
+                  onMouseLeave={e => e.target.style.background='transparent'}
+                >
+                  <div style={{fontWeight:600}}>{c.name}</div>
+                  <div style={{fontSize:11,color:'var(--text-dim)'}}>{c.vat_number} | {c.city} {c.country} | {c.phone||c.email||''}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function OrderForm({ addToast, ocrData, editOrder, onSave, onCancel, currentUser }) {
+      const isEdit = !!editOrder;
+      const [step, setStep] = useState(1);
+      const [saving, setSaving] = useState(false);
+
+      const buildInitForm = () => {
+        if (editOrder) return { ...editOrder };
+        const d = ocrData || {};
+        const cl = d.client || {};
+        const ld = (d.loading && d.loading[0]) || {};
+        const ul = (d.unloading && d.unloading[0]) || {};
+        const cg = d.cargo || {};
+        const pr = d.price || {};
+        return {
+          order_number: '', status: 'draft',
+          client_name: cl.name||'', client_vat: cl.vat_number||'', client_address: cl.address||'',
+          client_city: cl.city||'', client_country: cl.country||'', client_phone: cl.contact_phone||'', client_email: cl.contact_email||'',
+          order_number_client: d.order_number_client||'',
+          loading_company: ld.company_name||'', loading_address: ld.address||'', loading_city: ld.city||'',
+          loading_postal_code: ld.postal_code||'', loading_country: ld.country||'',
+          loading_date: ld.date||'', loading_time_from: ld.time_from||'', loading_time_to: ld.time_to||'', loading_reference: ld.reference||'',
+          unloading_company: ul.company_name||'', unloading_address: ul.address||'', unloading_city: ul.city||'',
+          unloading_postal_code: ul.postal_code||'', unloading_country: ul.country||'',
+          unloading_date: ul.date||'', unloading_time_from: ul.time_from||'', unloading_time_to: ul.time_to||'', unloading_reference: ul.reference||'',
+          cargo_description: cg.description||'', cargo_weight: cg.weight_kg||'', cargo_volume: cg.volume_m3||'',
+          cargo_packaging: cg.packaging||'', cargo_adr: cg.adr||'',
+          vehicle_type: '', vehicle_plates: '', trailer_plates: '',
+          driver_name: '', driver_phone: '', driver_document: '',
+          carrier_name: '', carrier_vat: '', carrier_address: '', carrier_city: '', carrier_country: '',
+          carrier_phone: '', carrier_email: '',
+          price_amount: pr.amount||'', price_currency: pr.currency||'EUR', payment_terms_days: pr.payment_terms_days||30,
+          price_carrier: '', carrier_payment_days: 45,
+          special_conditions: d.special_conditions||'',
+          route_description: d.route_description||'',
+          assigned_user: '',
+          participant_2: ''
+        };
+      };
+
+      const [form, setForm] = useState(() => {
+        const init = buildInitForm();
+        if (!isEdit && currentUser) init.assigned_user = currentUser;
+        return init;
+      });
+      const u = (k,v) => setForm(p => ({...p,[k]:v}));
+
+      const selectClient = (company, manualName) => {
+        if (company) {
+          setForm(p => ({...p,
+            client_name: company.name, client_vat: company.vat_number||'',
+            client_address: company.address||'', client_city: company.city||'',
+            client_country: company.country||'', client_phone: company.phone||'',
+            client_email: company.email||'', payment_terms_days: company.payment_terms_days||30
+          }));
+          addToast('Klient wybrany: ' + company.name, 'success');
+        } else if (manualName !== undefined) {
+          u('client_name', manualName);
+        }
+      };
+
+      const [carrierVehicles, setCarrierVehicles] = useState([]);
+      const [carrierDrivers, setCarrierDrivers] = useState([]);
+
+      const selectCarrier = (company, manualName) => {
+        if (company) {
+          setForm(p => ({...p,
+            carrier_name: company.name, carrier_vat: company.vat_number||'',
+            carrier_address: company.address||'', carrier_city: company.city||'',
+            carrier_country: company.country||'', carrier_phone: company.phone||'',
+            carrier_email: company.email||'', carrier_payment_days: company.payment_terms_days||45
+          }));
+          addToast('Przewoznik wybrany: ' + company.name, 'success');
+          // Fetch carrier vehicles & drivers
+          sb.from('vehicles').select('*').eq('company_id', company.id).then(({data}) => setCarrierVehicles(data||[]));
+          sb.from('drivers').select('*').eq('company_id', company.id).then(({data}) => setCarrierDrivers(data||[]));
+        } else if (manualName !== undefined) {
+          u('carrier_name', manualName);
+        }
+      };
+
+      const [carrierVatChecking, setCarrierVatChecking] = useState(false);
+
+      const checkCarrierVAT = async () => {
+        if (!form.carrier_vat) return;
+        setCarrierVatChecking(true);
+        try {
+          const data = await verifyVAT(form.carrier_vat.toUpperCase().replace(/\s/g,''));
+          if (data.valid) {
+            u('carrier_name', data.name || form.carrier_name);
+            if (data.address) {
+              const parts = data.address.split('\n');
+              u('carrier_address', parts[0]||'');
+              if (parts[1]) {
+                const m2 = parts[1].match(/(\d[\d\s-]*)\s+(.+)/);
+                if (m2) u('carrier_city', m2[2].trim());
+                else u('carrier_city', parts[1].trim());
+              }
+            }
+            u('carrier_country', form.carrier_vat.substring(0,2));
+            addToast('Przewoznik zweryfikowany!', 'success');
+          } else { addToast('NIP nieprawidlowy', 'error'); }
+        } catch(err) { addToast(err.message, 'error'); }
+        setCarrierVatChecking(false);
+      };
+
+      const handleSave = async (generatePdf = false) => {
+        setSaving(true);
+        const orderNum = form.order_number || `R11-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+        const route = `${form.loading_country||''} ${form.loading_city||''} -> ${form.unloading_country||''} ${form.unloading_city||''}`;
+        const payload = {
+          order_number: orderNum,
+          order_name: form.order_name || route,
+          status: form.status || 'draft',
+          route_description: form.route_description || route,
+          client_name: form.client_name, client_vat: form.client_vat,
+          client_address: form.client_address, client_city: form.client_city, client_country: form.client_country,
+          client_phone: form.client_phone, client_email: form.client_email,
+          order_number_client: form.order_number_client,
+          loading_company: form.loading_company, loading_address: form.loading_address,
+          loading_city: form.loading_city, loading_postal_code: form.loading_postal_code, loading_country: form.loading_country,
+          loading_date: form.loading_date||null, loading_time_from: form.loading_time_from||null, loading_time_to: form.loading_time_to||null,
+          loading_reference: form.loading_reference,
+          unloading_company: form.unloading_company, unloading_address: form.unloading_address,
+          unloading_city: form.unloading_city, unloading_postal_code: form.unloading_postal_code, unloading_country: form.unloading_country,
+          unloading_date: form.unloading_date||null, unloading_time_from: form.unloading_time_from||null, unloading_time_to: form.unloading_time_to||null,
+          unloading_reference: form.unloading_reference,
+          cargo_description: form.cargo_description, cargo_weight: form.cargo_weight||null,
+          cargo_volume: form.cargo_volume||null, cargo_packaging: form.cargo_packaging, cargo_adr: form.cargo_adr||null,
+          vehicle_type: form.vehicle_type, vehicle_plates: form.vehicle_plates, trailer_plates: form.trailer_plates,
+          driver_name: form.driver_name, driver_phone: form.driver_phone, driver_id_number: form.driver_document||null, driver_document: form.driver_document||null,
+          carrier_name: form.carrier_name, carrier_vat: form.carrier_vat,
+          carrier_address: form.carrier_address, carrier_city: form.carrier_city, carrier_country: form.carrier_country,
+          carrier_phone: form.carrier_phone, carrier_email: form.carrier_email,
+          price_amount: form.price_amount||null, price_buy: form.price_carrier||null, price_carrier: form.price_carrier ? parseFloat(form.price_carrier) : null, price_currency: form.price_currency,
+          payment_terms_days: form.payment_terms_days||30, carrier_payment_days: parseInt(form.carrier_payment_days)||45,
+          special_conditions: form.special_conditions,
+          assigned_user: form.assigned_user||null,
+          notes: form.participant_2 ? JSON.stringify({participant_2: form.participant_2}) : null,
+          updated_at: new Date().toISOString()
+        };
+
+        let error, savedOrder;
+        if (isEdit) {
+          const result = await sb.from('orders').update(payload).eq('id', editOrder.id).select();
+          error = result.error;
+          savedOrder = result.data?.[0] || {...editOrder, ...payload};
+        } else {
+          const result = await sb.from('orders').insert(payload).select();
+          error = result.error;
+          savedOrder = result.data?.[0];
+        }
+
+        if (error) { addToast('Blad zapisu: ' + error.message, 'error'); setSaving(false); return; }
+
+        addToast(isEdit ? 'Zlecenie zaktualizowane!' : 'Zlecenie zapisane!', 'success');
+
+        // Auto-create Drive folder for new orders
+        if (!isEdit && savedOrder && GAS_URL) {
+          try {
+            const resp = await fetch(GAS_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'createFolder', orderNumber: orderNum })
+            });
+            const folderResult = await resp.json();
+            if (folderResult.folderId && savedOrder.id) {
+              await sb.from('orders').update({ drive_folder_id: folderResult.folderId }).eq('id', savedOrder.id);
+              addToast('Folder Drive utworzony automatycznie!', 'info');
+              savedOrder.drive_folder_id = folderResult.folderId;
+            }
+          } catch(e) { console.error('Auto-folder error:', e); }
+        }
+
+        if (generatePdf) {
+          const pdfData = { ...form, order_number: orderNum };
+          const pdfBlob = await generateTransportOrderPDF(pdfData, addToast);
+
+          // Auto-upload PDF to Drive if folder exists
+          if (pdfBlob && savedOrder?.drive_folder_id && GAS_URL) {
+            try {
+              const base64 = await new Promise((ok, fail) => {
+                const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.onerror = fail; r.readAsDataURL(pdfBlob);
+              });
+              await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'upload', folderId: savedOrder.drive_folder_id,
+                  fileName: orderNum + '_transport_order.pdf', mimeType: 'application/pdf',
+                  base64Content: base64, documentType: 'transport_order'
+                })
+              });
+              addToast('PDF automatycznie wgrany na Drive!', 'info');
+            } catch(e) { console.error('Auto-upload PDF error:', e); }
+          }
+        }
+
+        setSaving(false);
+        onSave();
+      };
+
+      // STEP 1: Client + Cargo + Route
+      const renderStep1 = () => (
+        <div className="card fade-in">
+          <h3 style={{marginBottom:16,color:'var(--accent-blue)'}}>Dane zlecenia</h3>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div style={{gridColumn:'1/-1'}}><CompanySelect label="Zleceniodawca (klient)" filterType="client" value={form.client_name} onSelect={selectClient} addToast={addToast}/></div>
+            <div><label>NIP klienta</label><input value={form.client_vat} onChange={e=>u('client_vat',e.target.value)}/></div>
+            <div><label>Nr zlecenia klienta</label><input value={form.order_number_client} onChange={e=>u('order_number_client',e.target.value)}/></div>
+            <div><label>Adres</label><input value={form.client_address} onChange={e=>u('client_address',e.target.value)}/></div>
+            <div><label>Miasto</label><input value={form.client_city} onChange={e=>u('client_city',e.target.value)}/></div>
+            <div><label>Kraj</label><input value={form.client_country} onChange={e=>u('client_country',e.target.value)} maxLength={2}/></div>
+            <div><label>Telefon</label><input value={form.client_phone} onChange={e=>u('client_phone',e.target.value)}/></div>
+            <div><label>Email</label><input value={form.client_email} onChange={e=>u('client_email',e.target.value)}/></div>
+            <div><label>Cena klienta (netto)</label><input type="number" value={form.price_amount} onChange={e=>u('price_amount',e.target.value)} placeholder="np. 2000"/></div>
+            <div><label>Waluta</label>
+              <select value={form.price_currency} onChange={e=>u('price_currency',e.target.value)}>
+                <option>EUR</option><option>PLN</option><option>CZK</option><option>USD</option>
+              </select>
+            </div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-green)',fontSize:14}}>Zaladunek</h4>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div style={{gridColumn:'1/-1'}}><label>Firma zaladunkowa</label><input value={form.loading_company} onChange={e=>u('loading_company',e.target.value)}/></div>
+            <div><label>Adres</label><input value={form.loading_address} onChange={e=>u('loading_address',e.target.value)}/></div>
+            <div><label>Miasto</label><input value={form.loading_city} onChange={e=>u('loading_city',e.target.value)}/></div>
+            <div><label>Kod pocztowy</label><input value={form.loading_postal_code} onChange={e=>u('loading_postal_code',e.target.value)}/></div>
+            <div><label>Kraj</label><input value={form.loading_country} onChange={e=>u('loading_country',e.target.value)} maxLength={2}/></div>
+            <div><label>Data</label><input type="date" value={form.loading_date} onChange={e=>u('loading_date',e.target.value)}/></div>
+            <div><label>Godzina od</label><input type="time" value={form.loading_time_from} onChange={e=>u('loading_time_from',e.target.value)}/></div>
+            <div><label>Godzina do</label><input type="time" value={form.loading_time_to} onChange={e=>u('loading_time_to',e.target.value)}/></div>
+            <div><label>Referencja</label><input value={form.loading_reference} onChange={e=>u('loading_reference',e.target.value)}/></div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-red)',fontSize:14}}>Rozladunek</h4>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div style={{gridColumn:'1/-1'}}><label>Firma rozladunkowa</label><input value={form.unloading_company} onChange={e=>u('unloading_company',e.target.value)}/></div>
+            <div><label>Adres</label><input value={form.unloading_address} onChange={e=>u('unloading_address',e.target.value)}/></div>
+            <div><label>Miasto</label><input value={form.unloading_city} onChange={e=>u('unloading_city',e.target.value)}/></div>
+            <div><label>Kod pocztowy</label><input value={form.unloading_postal_code} onChange={e=>u('unloading_postal_code',e.target.value)}/></div>
+            <div><label>Kraj</label><input value={form.unloading_country} onChange={e=>u('unloading_country',e.target.value)} maxLength={2}/></div>
+            <div><label>Data</label><input type="date" value={form.unloading_date} onChange={e=>u('unloading_date',e.target.value)}/></div>
+            <div><label>Godzina od</label><input type="time" value={form.unloading_time_from} onChange={e=>u('unloading_time_from',e.target.value)}/></div>
+            <div><label>Godzina do</label><input type="time" value={form.unloading_time_to} onChange={e=>u('unloading_time_to',e.target.value)}/></div>
+            <div><label>Referencja</label><input value={form.unloading_reference} onChange={e=>u('unloading_reference',e.target.value)}/></div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-orange)',fontSize:14}}>Towar</h4>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div style={{gridColumn:'1/-1'}}><label>Opis towaru</label><input value={form.cargo_description} onChange={e=>u('cargo_description',e.target.value)}/></div>
+            <div><label>Waga (kg)</label><input type="number" value={form.cargo_weight} onChange={e=>u('cargo_weight',e.target.value)}/></div>
+            <div><label>Objetosc (m3)</label><input type="number" value={form.cargo_volume} onChange={e=>u('cargo_volume',e.target.value)}/></div>
+            <div><label>ADR (klasa)</label><input value={form.cargo_adr} onChange={e=>u('cargo_adr',e.target.value)} placeholder="puste = brak ADR"/></div>
+            <div><label>Opakowanie</label><input value={form.cargo_packaging} onChange={e=>u('cargo_packaging',e.target.value)}/></div>
+          </div>
+
+          <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:16}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              <div>
+                <label>Osoba odpowiedzialna</label>
+                <select value={form.assigned_user} onChange={e=>u('assigned_user',e.target.value)}>
+                  <option value="">-- wybierz --</option>
+                  {TEAM_USERS.map(tu => (
+                    <option key={tu.id} value={tu.id}>{tu.name} ({tu.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label>Dodatkowy uczestnik (opcjonalnie)</label>
+                <select value={form.participant_2} onChange={e=>u('participant_2',e.target.value)}>
+                  <option value="">-- brak --</option>
+                  {TEAM_USERS.filter(tu => tu.id !== form.assigned_user).map(tu => (
+                    <option key={tu.id} value={tu.id}>{tu.name} ({tu.email})</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:8,marginTop:24}}>
+            <button className="btn btn-ghost" onClick={onCancel} style={{flex:1,justifyContent:'center'}}>Anuluj</button>
+            <button className="btn btn-primary" onClick={()=>setStep(2)} style={{flex:1,justifyContent:'center'}}>Dalej - Przewoznik</button>
+          </div>
+        </div>
+      );
+
+      // STEP 2: Carrier
+      const renderStep2 = () => (
+        <div className="card fade-in">
+          <h3 style={{marginBottom:16,color:'var(--accent-orange)'}}>Przewoznik</h3>
+
+          <div style={{marginBottom:16}}>
+            <CompanySelect label="Przewoznik (wybierz z bazy lub wpisz)" filterType="carrier" value={form.carrier_name} onSelect={selectCarrier} addToast={addToast}/>
+          </div>
+
+          {/* Manual carrier details + VIES verify */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:10,marginBottom:16}}>
+            <div><label>NIP przewoznika</label><input value={form.carrier_vat} onChange={e=>u('carrier_vat',e.target.value.toUpperCase())} placeholder="np. PL1234567890"/></div>
+            <div style={{alignSelf:'end'}}><button className="btn btn-primary" onClick={checkCarrierVAT} disabled={carrierVatChecking} style={{height:42}}>
+              {carrierVatChecking ? <div className="spinner" style={{width:14,height:14}}/> : 'Weryfikuj'}
+            </button></div>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div><label>Adres</label><input value={form.carrier_address} onChange={e=>u('carrier_address',e.target.value)}/></div>
+            <div><label>Miasto</label><input value={form.carrier_city} onChange={e=>u('carrier_city',e.target.value)}/></div>
+            <div><label>Kraj</label><input value={form.carrier_country} onChange={e=>u('carrier_country',e.target.value)} maxLength={2}/></div>
+            <div><label>Telefon</label><input value={form.carrier_phone} onChange={e=>u('carrier_phone',e.target.value)}/></div>
+            <div><label>Email</label><input value={form.carrier_email} onChange={e=>u('carrier_email',e.target.value)}/></div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-cyan)',fontSize:14}}>Pojazd</h4>
+          {carrierVehicles.length > 0 ? (
+            <div style={{marginBottom:12}}>
+              <label style={{fontSize:11}}>Wybierz z floty przewoznika</label>
+              <select value={form.vehicle_plates||''} onChange={e => {
+                const v = carrierVehicles.find(vv => vv.truck_plate === e.target.value);
+                if (v) { u('vehicle_plates', v.truck_plate); u('trailer_plates', v.trailer_plate||''); }
+                else { u('vehicle_plates', e.target.value); }
+              }}>
+                <option value="">-- wybierz pojazd --</option>
+                {carrierVehicles.map(v => (
+                  <option key={v.id} value={v.truck_plate}>
+                    {v.truck_plate}{v.trailer_plate ? ' / '+v.trailer_plate : ''} | {v.trailer_type==='MULTI'?'Multi':'Mono'}{v.adr_class?' | ADR:'+v.adr_class:''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div><label>Nr rejestracyjny ciagnika</label><input value={form.vehicle_plates} onChange={e=>u('vehicle_plates',e.target.value)}/></div>
+            <div><label>Nr rejestracyjny naczepy</label><input value={form.trailer_plates} onChange={e=>u('trailer_plates',e.target.value)}/></div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-cyan)',fontSize:14}}>Kierowca</h4>
+          {carrierDrivers.length > 0 ? (
+            <div style={{marginBottom:12}}>
+              <label style={{fontSize:11}}>Wybierz z kierowcow przewoznika</label>
+              <select value={form.driver_name||''} onChange={e => {
+                const d = carrierDrivers.find(dd => (dd.first_name+' '+dd.last_name) === e.target.value);
+                if (d) { u('driver_name', d.first_name+' '+d.last_name); u('driver_phone', d.phone||''); u('driver_document', d.adr_certificate||d.license_number||''); }
+                else { u('driver_name', e.target.value); }
+              }}>
+                <option value="">-- wybierz kierowce --</option>
+                {carrierDrivers.map(d => (
+                  <option key={d.id} value={d.first_name+' '+d.last_name}>
+                    {d.first_name} {d.last_name}{d.phone?' | '+d.phone:''}{d.adr_certificate?' | ADR:'+d.adr_certificate:''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div><label>Imie i nazwisko</label><input value={form.driver_name} onChange={e=>u('driver_name',e.target.value)}/></div>
+            <div><label>Telefon</label><input value={form.driver_phone} onChange={e=>u('driver_phone',e.target.value)}/></div>
+            <div><label>Nr dokumentu</label><input value={form.driver_document} onChange={e=>u('driver_document',e.target.value)}/></div>
+          </div>
+
+          <h4 style={{marginTop:24,marginBottom:12,color:'var(--accent-purple)',fontSize:14}}>Warunki finansowe przewoznika</h4>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+            <div><label>Cena dla przewoznika (netto)</label><input type="number" value={form.price_carrier} onChange={e=>u('price_carrier',e.target.value)} placeholder="np. 1700"/></div>
+            <div><label>Waluta</label>
+              <select value={form.price_currency} onChange={e=>u('price_currency',e.target.value)}>
+                <option>EUR</option><option>PLN</option><option>CZK</option><option>USD</option>
+              </select>
+            </div>
+            <div><label>Termin platnosci przewoznika (dni)</label><input type="number" value={form.carrier_payment_days} onChange={e=>u('carrier_payment_days',e.target.value)} placeholder="45"/></div>
+          </div>
+          {form.price_amount && form.price_carrier && (
+            <div style={{marginTop:12,padding:12,background:'rgba(34,197,94,.05)',borderRadius:'var(--radius)',border:'1px solid rgba(34,197,94,.2)'}}>
+              <span style={{color:'var(--accent-green)',fontWeight:700}}>Marza: {(parseFloat(form.price_amount)-parseFloat(form.price_carrier)).toFixed(2)} {form.price_currency} ({((parseFloat(form.price_amount)-parseFloat(form.price_carrier))/parseFloat(form.price_amount)*100).toFixed(1)}%)</span>
+            </div>
+          )}
+
+          <div style={{marginTop:20}}>
+            <label>Warunki specjalne</label>
+            <textarea value={form.special_conditions||''} onChange={e=>u('special_conditions',e.target.value)} style={{minHeight:80}}/>
+          </div>
+
+          <div style={{display:'flex',gap:8,marginTop:24}}>
+            <button className="btn btn-ghost" onClick={()=>setStep(1)} style={{flex:1,justifyContent:'center'}}>Wroc</button>
+            <button className="btn btn-primary" onClick={()=>setStep(3)} style={{flex:1,justifyContent:'center'}}>Dalej - Podsumowanie</button>
+          </div>
+        </div>
+      );
+
+      // STEP 3: Summary
+      const renderStep3 = () => {
+        const priceC = parseFloat(form.price_amount)||0;
+        const priceP = parseFloat(form.price_carrier)||0;
+        const margin = priceC - priceP;
+        return (
+        <div className="card fade-in">
+          <h3 style={{marginBottom:16}}>Podsumowanie zlecenia {form.order_number || 'R11-...'}</h3>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+            <div><h4 style={{color:'var(--accent-blue)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Zleceniodawca</h4>
+              <p style={{fontWeight:600}}>{form.client_name||'---'}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.client_vat}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.client_address} {form.client_city}</p>
+            </div>
+            <div><h4 style={{color:'var(--accent-orange)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Przewoznik</h4>
+              <p style={{fontWeight:600}}>{form.carrier_name||'---'}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.carrier_vat}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.carrier_address} {form.carrier_city}</p>
+            </div>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+            <div><h4 style={{color:'var(--accent-green)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Zaladunek</h4>
+              <p style={{fontWeight:600}}>{form.loading_company||'---'}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.loading_address}, {form.loading_city} {form.loading_country}</p>
+              <p style={{fontSize:12}}>{form.loading_date} {form.loading_time_from||''}{form.loading_time_to?'-'+form.loading_time_to:''}</p>
+            </div>
+            <div><h4 style={{color:'var(--accent-red)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Rozladunek</h4>
+              <p style={{fontWeight:600}}>{form.unloading_company||'---'}</p>
+              <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.unloading_address}, {form.unloading_city} {form.unloading_country}</p>
+              <p style={{fontSize:12}}>{form.unloading_date} {form.unloading_time_from||''}{form.unloading_time_to?'-'+form.unloading_time_to:''}</p>
+            </div>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <h4 style={{color:'var(--accent-orange)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Towar & cena</h4>
+            <p>{form.cargo_description||'---'} - {form.cargo_weight||'---'}kg</p>
+          </div>
+
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:16}}>
+            <div style={{padding:16,textAlign:'center',background:'rgba(59,130,246,.08)',borderRadius:'var(--radius)',border:'1px solid rgba(59,130,246,.2)'}}>
+              <div style={{fontSize:11,color:'var(--text-dim)'}}>Cena klienta</div>
+              <div style={{fontSize:22,fontWeight:700,color:'var(--accent-blue)'}}>{priceC||'---'} {form.price_currency}</div>
+            </div>
+            <div style={{padding:16,textAlign:'center',background:'rgba(245,158,11,.08)',borderRadius:'var(--radius)',border:'1px solid rgba(245,158,11,.2)'}}>
+              <div style={{fontSize:11,color:'var(--text-dim)'}}>Cena przewoznika</div>
+              <div style={{fontSize:22,fontWeight:700,color:'var(--accent-orange)'}}>{priceP||'---'} {form.price_currency}</div>
+            </div>
+            <div style={{padding:16,textAlign:'center',background:margin>=0?'rgba(34,197,94,.08)':'rgba(239,68,68,.08)',borderRadius:'var(--radius)',border:`1px solid ${margin>=0?'rgba(34,197,94,.2)':'rgba(239,68,68,.2)'}`}}>
+              <div style={{fontSize:11,color:'var(--text-dim)'}}>Marza</div>
+              <div style={{fontSize:22,fontWeight:700,color:margin>=0?'var(--accent-green)':'var(--accent-red)'}}>{priceC&&priceP?margin:'---'} {form.price_currency}</div>
+            </div>
+          </div>
+
+          {form.special_conditions && (
+            <div style={{padding:16,background:'var(--bg)',borderRadius:'var(--radius)',border:'1px solid var(--border)',marginBottom:16}}>
+              <h4 style={{fontSize:12,color:'var(--text-dim)',marginBottom:8,textTransform:'uppercase'}}>Warunki specjalne</h4>
+              <p style={{fontSize:13,whiteSpace:'pre-wrap'}}>{form.special_conditions}</p>
+            </div>
+          )}
+
+          {(form.vehicle_plates || form.driver_name) && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:16}}>
+              <div><h4 style={{color:'var(--accent-cyan)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Pojazd</h4>
+                <p style={{fontWeight:600}}>{form.vehicle_plates||'---'}{form.trailer_plates?' / '+form.trailer_plates:''}</p>
+              </div>
+              <div><h4 style={{color:'var(--accent-cyan)',fontSize:12,textTransform:'uppercase',marginBottom:8}}>Kierowca</h4>
+                <p style={{fontWeight:600}}>{form.driver_name||'---'}</p>
+                <p style={{fontSize:12,color:'var(--text-dim)'}}>{form.driver_phone||''}{form.driver_document?' | Dok: '+form.driver_document:''}</p>
+              </div>
+            </div>
+          )}
+
+          <div style={{display:'flex',gap:8,marginTop:16,flexWrap:'wrap'}}>
+            <button className="btn btn-ghost" onClick={() => setStep(2)} style={{flex:1,justifyContent:'center'}}>Wroc</button>
+            <button className="btn btn-ghost" onClick={() => generateTransportOrderPDF({...form, order_number: form.order_number||'DRAFT'}, addToast)} style={{justifyContent:'center',fontSize:12,color:'var(--accent-cyan)'}}>
+              Podglad PDF
+            </button>
+            <button className="btn btn-green" onClick={() => handleSave(false)} disabled={saving} style={{flex:1,justifyContent:'center'}}>
+              {saving?<div className="spinner" style={{width:14,height:14}}/>:null} Zapisz
+            </button>
+            <button className="btn btn-primary" onClick={() => handleSave(true)} disabled={saving} style={{flex:1,justifyContent:'center'}}>
+              {saving?<div className="spinner" style={{width:14,height:14}}/>:null} Zapisz + Generuj PDF
+            </button>
+          </div>
+        </div>
+      )};
+
+      return (
+        <div className="fade-in" style={{maxWidth:900,margin:'0 auto'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:20}}>
+            <button className="btn btn-ghost btn-sm" onClick={onCancel}>Wroc</button>
+            <h2 style={{fontSize:20,fontWeight:700,flex:1}}>{isEdit ? 'Edytuj zlecenie' : 'Nowe zlecenie transportowe'}</h2>
+            <div className="step-indicator">
+              {[1,2,3].map(s => <div key={s} className={`step-dot ${s===step?'active':s<step?'done':''}`}/>)}
+            </div>
+          </div>
+          {step === 1 && renderStep1()}
+          {step === 2 && renderStep2()}
+          {step === 3 && renderStep3()}
+        </div>
+      );
+    }
+
+    // ==================== PDF GENERATOR (Bilingual EN + Carrier Language) ====================
+    async function generateTransportOrderPDF(order, addToast) {
+      try {
+        if (!window.jspdf) {
+          const urls = [
+            'https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js',
+            'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js'
+          ];
+          for (const url of urls) {
+            if (window.jspdf) break;
+            try {
+              const s = document.createElement('script'); s.src = url; document.head.appendChild(s);
+              await new Promise((ok, fail) => { s.onload = ok; s.onerror = fail; setTimeout(ok, 4000); });
+              if (window.jspdf) break;
+            } catch(e) { console.warn('jsPDF CDN fail:', url); }
+          }
+        }
+        if (!window.jspdf) { addToast('Cannot load PDF library. Please refresh.', 'error'); return; }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const W = 210, M = 15;
+        let y = M;
+        const ln = (inc=5) => { y += inc; };
+        const txt = (t, x, opts={}) => { doc.text(String(t == null ? '---' : t), x, y, opts); };
+
+        const en = PDF_I18N.en;
+        const carrierCC = order.carrier_country || '';
+        const lang2 = getCarrierLang(carrierCC);
+        const lo = lang2 !== 'en' ? PDF_I18N[lang2] : null;
+        // Bilingual label: "ENGLISH / Local"
+        const bl = (key) => lo ? `${en[key]} / ${lo[key]}` : en[key];
+
+        // === HEADER ===
+        doc.setFillColor(12, 14, 20);
+        doc.rect(0, 0, W, 40, 'F');
+        doc.setTextColor(59, 130, 246);
+        doc.setFontSize(22); doc.setFont('helvetica','bold');
+        txt('ROUTE11', M);
+        doc.setFontSize(9); doc.setTextColor(150);
+        txt('Transport Management System', M + 55);
+        doc.setFontSize(13); doc.setTextColor(255);
+        txt(bl('title'), W - M, {align:'right'});
+        doc.setFontSize(10);
+        ln(7); txt(order.order_number || 'DRAFT', W - M, {align:'right'});
+        doc.setTextColor(150); doc.setFontSize(8);
+        ln(5); txt(new Date().toISOString().slice(0,10), W - M, {align:'right'});
+
+        // === CLIENT / CARRIER ===
+        y = 48;
+        doc.setDrawColor(30, 35, 50);
+        const col1 = M, col2 = W/2 + 5;
+        doc.setTextColor(59,130,246); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        txt(bl('client'), col1); txt(bl('carrier'), col2);
+        ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+        txt(order.client_name || '---', col1); txt(order.carrier_name || '---', col2);
+        ln(4); doc.setTextColor(80);
+        txt(en.vat+': ' + (order.client_vat||'---'), col1); txt(en.vat+': ' + (order.carrier_vat||'---'), col2);
+        ln(4); txt(order.client_address||'', col1); txt(order.carrier_address||'', col2);
+        ln(4);
+        txt((order.client_city||'')+' '+(order.client_country||''), col1);
+        txt((order.carrier_city||'')+' '+(order.carrier_country||''), col2);
+        ln(4); txt(en.phone+': '+(order.client_phone||'---'), col1); txt(en.phone+': '+(order.carrier_phone||'---'), col2);
+        ln(4); txt(en.email+': '+(order.client_email||'---'), col1); txt(en.email+': '+(order.carrier_email||'---'), col2);
+
+        // === LOADING / UNLOADING ===
+        ln(6); doc.setDrawColor(200); doc.line(M,y,W-M,y); ln(6);
+        doc.setTextColor(34,197,94); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        txt(bl('loading'), col1); doc.setTextColor(239,68,68); txt(bl('unloading'), col2);
+        ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+        txt(order.loading_company||'---', col1); txt(order.unloading_company||'---', col2);
+        ln(4); doc.setTextColor(80);
+        txt(order.loading_address||'', col1); txt(order.unloading_address||'', col2);
+        ln(4);
+        txt((order.loading_postal_code||'')+' '+(order.loading_city||'')+', '+(order.loading_country||''), col1);
+        txt((order.unloading_postal_code||'')+' '+(order.unloading_city||'')+', '+(order.unloading_country||''), col2);
+        ln(4); doc.setTextColor(0);
+        txt(en.date+': '+(order.loading_date||'---')+' '+(order.loading_time_from||'')+(order.loading_time_to?'-'+order.loading_time_to:''), col1);
+        txt(en.date+': '+(order.unloading_date||'---')+' '+(order.unloading_time_from||'')+(order.unloading_time_to?'-'+order.unloading_time_to:''), col2);
+        ln(4);
+        txt(en.ref+': '+(order.loading_reference||'---'), col1); txt(en.ref+': '+(order.unloading_reference||'---'), col2);
+
+        // === CARGO ===
+        ln(6); doc.line(M,y,W-M,y); ln(6);
+        doc.setTextColor(245,158,11); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        txt(bl('cargo'), col1);
+        ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+        txt(en.description+': '+(order.cargo_description||'---'), col1); ln(4);
+        txt(en.weight+': '+(order.cargo_weight||'---')+' kg | '+en.volume+': '+(order.cargo_volume||'---')+' m3', col1); ln(4);
+        if (order.cargo_adr) { txt(en.adr+': '+order.cargo_adr, col1); ln(4); }
+
+        // === VEHICLE / DRIVER ===
+        ln(2); doc.line(M,y,W-M,y); ln(6);
+        doc.setTextColor(6,182,212); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        txt(bl('vehicle')+' / '+bl('driver'), col1);
+        ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+        txt(en.truck+': '+(order.vehicle_plates||'---')+' | '+en.trailer+': '+(order.trailer_plates||'---'), col1); ln(4);
+        txt(en.driver+': '+(order.driver_name||'---')+' | '+en.phone+': '+(order.driver_phone||'---'), col1);
+
+        // === FINANCIAL ===
+        ln(6); doc.line(M,y,W-M,y); ln(6);
+        doc.setTextColor(168,85,247); doc.setFontSize(9); doc.setFont('helvetica','bold');
+        txt(bl('financial'), col1);
+        ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+        const carrierPrice = order.price_carrier||order.price_buy||'---';
+        const curr = order.price_currency||'EUR';
+        txt(en.freight+': '+carrierPrice+' '+curr+' '+en.net, col1); ln(4);
+        const payDays = order.carrier_payment_days||order.payment_terms_days||30;
+        txt(en.paymentDays+': '+payDays+' '+en.days, col1);
+
+        // === SPECIAL CONDITIONS ===
+        if (order.special_conditions) {
+          ln(6); doc.line(M,y,W-M,y); ln(6);
+          doc.setTextColor(100); doc.setFontSize(9); doc.setFont('helvetica','bold');
+          txt(bl('special'), col1);
+          ln(5); doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0);
+          var scLines = doc.splitTextToSize(String(order.special_conditions), W-2*M);
+          doc.text(scLines, col1, y); y += scLines.length*4;
+        }
+
+        // === FOOTER ===
+        y = 260; doc.setDrawColor(200); doc.line(M,y,W-M,y);
+        ln(5); doc.setTextColor(150); doc.setFontSize(7);
+        txt('Route 11 s.r.o. | Moravska Ostrava | CZ05714907 | office@route11.eu', M);
+        ln(3); txt(en.generated+': '+new Date().toISOString().slice(0,16).replace('T',' ')+' | '+(order.order_number||''), M);
+
+        doc.save((order.order_number||'order')+'_transport.pdf');
+        addToast('PDF generated!', 'success');
+        return doc.output('blob');
+      } catch (err) {
+        console.error('PDF error:', err);
+        addToast('PDF error: '+err.message, 'error');
+        return null;
+      }
+    }
+
+    // ==================== CASH FLOW MODULE (Etap 7) ====================
+    function CashFlowModule({ addToast }) {
+      const [orders, setOrders] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const chartRef = useRef(null);
+      const chartInstance = useRef(null);
+
+      useEffect(() => {
+        (async () => {
+          const { data } = await sb.from('orders').select('*').neq('status','cancelled').order('loading_date', { ascending: true });
+          setOrders((data||[]).map(o => ({...o, price_carrier: o.price_carrier||o.price_buy||null})));
+          setLoading(false);
+        })();
+      }, []);
+
+      // Calculate stats
+      const stats = useMemo(() => {
+        const now = new Date();
+        const in30 = new Date(now.getTime() + 30*24*60*60*1000);
+        let income = 0, expense = 0, overdue = 0, overdueCount = 0;
+        orders.forEach(o => {
+          const pc = parseFloat(o.price_amount) || 0;
+          const pp = parseFloat(o.price_carrier) || 0;
+          income += pc;
+          expense += pp;
+          // Check overdue (simplified: if loading_date is past and status not paid)
+          if (o.loading_date && new Date(o.loading_date) < now && o.status !== 'paid' && o.status !== 'cancelled') {
+            const days = Math.floor((now - new Date(o.loading_date)) / (24*60*60*1000));
+            if (days > (o.payment_terms_days || 30)) { overdue += pc; overdueCount++; }
+          }
+        });
+        return { income, expense, margin: income - expense, marginPct: income > 0 ? ((income-expense)/income*100).toFixed(1) : 0, overdue, overdueCount };
+      }, [orders]);
+
+      // Build chart
+      useEffect(() => {
+        if (!chartRef.current || orders.length === 0 || !window.Chart) return;
+        if (chartInstance.current) chartInstance.current.destroy();
+
+        const days = [];
+        const incomeData = [];
+        const expenseData = [];
+        const marginData = [];
+        const now = new Date();
+
+        for (let i = -30; i <= 30; i++) {
+          const d = new Date(now.getTime() + i*24*60*60*1000);
+          const label = d.toLocaleDateString('pl', {day:'2-digit',month:'2-digit'});
+          days.push(label);
+
+          let dayIncome = 0, dayExpense = 0;
+          orders.forEach(o => {
+            if (o.loading_date) {
+              const ld = new Date(o.loading_date);
+              if (ld.toDateString() === d.toDateString()) {
+                dayIncome += parseFloat(o.price_amount) || 0;
+                dayExpense += parseFloat(o.price_carrier) || 0;
+              }
+            }
+          });
+
+          const prevIncome = incomeData.length > 0 ? incomeData[incomeData.length-1] : 0;
+          const prevExpense = expenseData.length > 0 ? expenseData[expenseData.length-1] : 0;
+          incomeData.push(prevIncome + dayIncome);
+          expenseData.push(prevExpense + dayExpense);
+          marginData.push((prevIncome + dayIncome) - (prevExpense + dayExpense));
+        }
+
+        chartInstance.current = new window.Chart(chartRef.current.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: days,
+            datasets: [
+              { label: 'Przychody', data: incomeData, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 },
+              { label: 'Wydatki', data: expenseData, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 },
+              { label: 'Saldo', data: marginData, borderColor: '#3b82f6', borderDash: [5,5], tension: 0.3, fill: false }
+            ]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { labels: { color: '#94a3b8' } },
+              tooltip: { mode: 'index', intersect: false }
+            },
+            scales: {
+              x: { ticks: { color: '#475569', maxTicksLimit: 15 }, grid: { color: 'rgba(30,35,50,0.5)' } },
+              y: { ticks: { color: '#475569', callback: v => v + ' EUR' }, grid: { color: 'rgba(30,35,50,0.5)' } }
+            }
+          }
+        });
+      }, [orders]);
+
+      if (loading) return <div style={{textAlign:'center',padding:60,color:'var(--text-muted)'}}>Ladowanie danych...</div>;
+
+      return (
+        <div className="fade-in">
+          <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>Cash Flow</h2>
+
+          {/* Summary Cards */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+            <div className="stat-card" style={{background:'rgba(34,197,94,.05)',borderColor:'rgba(34,197,94,.2)'}}>
+              <div className="value" style={{color:'var(--accent-green)'}}>{stats.income.toLocaleString()}</div>
+              <div className="label">Przychody (EUR)</div>
+            </div>
+            <div className="stat-card" style={{background:'rgba(239,68,68,.05)',borderColor:'rgba(239,68,68,.2)'}}>
+              <div className="value" style={{color:'var(--accent-red)'}}>{stats.expense.toLocaleString()}</div>
+              <div className="label">Wydatki (EUR)</div>
+            </div>
+            <div className="stat-card" style={{background:'rgba(59,130,246,.05)',borderColor:'rgba(59,130,246,.2)'}}>
+              <div className="value" style={{color:'var(--accent-blue)'}}>{stats.margin.toLocaleString()} ({stats.marginPct}%)</div>
+              <div className="label">Marza (EUR)</div>
+            </div>
+            <div className="stat-card" style={{background: stats.overdueCount > 0 ? 'rgba(239,68,68,.08)' : 'rgba(100,116,139,.05)', borderColor: stats.overdueCount > 0 ? 'rgba(239,68,68,.3)' : 'var(--border)'}}>
+              <div className="value" style={{color: stats.overdueCount > 0 ? 'var(--accent-red)' : 'var(--text-muted)'}}>{stats.overdueCount}</div>
+              <div className="label">Przeterminowane ({stats.overdue.toLocaleString()} EUR)</div>
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="card" style={{marginBottom:24}}>
+            <h4 style={{marginBottom:16,color:'var(--text-dim)',fontSize:13,textTransform:'uppercase'}}>Przychody vs Wydatki (60 dni)</h4>
+            {orders.length === 0 ? (
+              <p style={{textAlign:'center',color:'var(--text-muted)',padding:40}}>Brak danych do wykresu - dodaj zlecenia</p>
+            ) : (
+              <canvas ref={chartRef} height="100"/>
+            )}
+          </div>
+
+          {/* Transactions Table */}
+          <div className="card" style={{padding:0,overflow:'hidden'}}>
+            <div style={{padding:'16px 20px',borderBottom:'1px solid var(--border)'}}>
+              <h4 style={{fontSize:13,textTransform:'uppercase',color:'var(--text-dim)'}}>Transakcje</h4>
+            </div>
+            <div style={{overflowX:'auto'}}>
+              <table className="tbl">
+                <thead><tr>
+                  <th>Zlecenie</th><th>Trasa</th><th>Klient</th><th>Przychod</th><th>Koszt</th><th>Marza</th><th>Status</th>
+                </tr></thead>
+                <tbody>
+                  {orders.map(o => {
+                    const pc = parseFloat(o.price_amount)||0;
+                    const pp = parseFloat(o.price_carrier)||0;
+                    const m = pc - pp;
+                    return (
+                      <tr key={o.id}>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,fontWeight:600}}>{o.order_number}</td>
+                        <td style={{fontSize:12}}>{o.route_description||'---'}</td>
+                        <td style={{fontSize:12}}>{o.client_name||'---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,color:'var(--accent-green)'}}>{pc ? `+${pc}` : '---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,color:'var(--accent-red)'}}>{pp ? `-${pp}` : '---'}</td>
+                        <td style={{fontFamily:'JetBrains Mono',fontSize:12,fontWeight:700,color:m>=0?'var(--accent-green)':'var(--accent-red)'}}>{pc&&pp?m:'---'}</td>
+                        <td><span className={`badge ${statusBadge(o.status)}`}>{statusLabel(o.status)}</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==================== NOTIFICATION HELPERS ====================
+    const NOTIF_TYPE_LABELS = {
+      'DAY_BEFORE_LOADING': 'Dzien przed zaladunkiem',
+      'LOADING_DAY_CMR': 'Dzien zaladunku - CMR',
+      'CARRIER_CONFIRMATION': 'Potwierdzenie przewoznika',
+      'DAY_BEFORE_PAYMENT_IN': 'Dzien przed platnoscia (przychod)',
+      'DAY_BEFORE_PAYMENT_OUT': 'Dzien przed platnoscia (wydatek)',
+      'PAYMENT_OVERDUE_IN': 'Przeterminowana platnosc (przychod)',
+      'PAYMENT_OVERDUE_OUT': 'Przeterminowana platnosc (wydatek)',
+      'CMR_REMINDER': 'Przypomnienie o CMR',
+      'DELIVERY_CONFIRMATION': 'Potwierdzenie dostawy',
+      'STATUS_CHANGE': 'Zmiana statusu',
+      'CUSTOM': 'Inne'
+    };
+    const NOTIF_TYPE_ICONS = {
+      'DAY_BEFORE_LOADING': '\u{1F69A}', 'LOADING_DAY_CMR': '\u{1F4CB}',
+      'CARRIER_CONFIRMATION': '\u2705', 'DAY_BEFORE_PAYMENT_IN': '\u{1F4B0}',
+      'DAY_BEFORE_PAYMENT_OUT': '\u{1F4B8}', 'PAYMENT_OVERDUE_IN': '\u26A0\uFE0F',
+      'PAYMENT_OVERDUE_OUT': '\u26A0\uFE0F', 'CMR_REMINDER': '\u{1F4E4}',
+      'DELIVERY_CONFIRMATION': '\u2705', 'STATUS_CHANGE': '\u{1F504}', 'CUSTOM': '\u{1F514}'
+    };
+
+    function getNotificationsForStatusChange(newStatus, order) {
+      if (!order) return [];
+      const route = `${order.loading_city||''} -> ${order.unloading_city||''}`;
+      const nr = order.order_number || 'brak';
+      const now = new Date().toISOString();
+      const notifications = [];
+
+      notifications.push({
+        order_id: order.id, notification_type: 'STATUS_CHANGE', channel: 'dashboard',
+        scheduled_at: now, title: `Status zmieniony: ${nr}`,
+        message: `Zlecenie ${nr} (${route}) zmienilo status na: ${statusLabel(newStatus)}`,
+        status: 'PENDING'
+      });
+
+      if (newStatus === 'confirmed' && order.loading_date) {
+        const ld = new Date(order.loading_date);
+        ld.setDate(ld.getDate() - 1);
+        notifications.push({
+          order_id: order.id, notification_type: 'DAY_BEFORE_LOADING', channel: 'dashboard',
+          scheduled_at: ld.toISOString(), title: `Jutro zaladunek: ${nr}`,
+          message: `Jutro zaladunek zlecenia ${nr}. Trasa: ${route}. Potwierdz gotowosc przewoznika.`,
+          status: 'PENDING'
+        });
+      }
+
+      if (newStatus === 'loading') {
+        const t16 = new Date(); t16.setHours(16,0,0,0);
+        notifications.push({
+          order_id: order.id, notification_type: 'LOADING_DAY_CMR', channel: 'dashboard',
+          scheduled_at: t16 > new Date() ? t16.toISOString() : now,
+          title: `Wyslij CMR: ${nr}`,
+          message: `Prosimy o przeslanie CMR i kwitu wagowego dla zlecenia ${nr}.`,
+          status: 'PENDING'
+        });
+      }
+
+      if (newStatus === 'delivered') {
+        const tmr = new Date(); tmr.setDate(tmr.getDate() + 1);
+        notifications.push({
+          order_id: order.id, notification_type: 'CMR_REMINDER', channel: 'dashboard',
+          scheduled_at: tmr.toISOString(), title: `Podpisany CMR: ${nr}`,
+          message: `Prosimy o przeslanie podpisanego CMR dla zlecenia ${nr}.`,
+          status: 'PENDING'
+        });
+      }
+
+      if (newStatus === 'invoiced') {
+        const days = parseInt(order.payment_terms_days) || 30;
+        const due = new Date(); due.setDate(due.getDate() + days);
+        const dayBefore = new Date(due); dayBefore.setDate(dayBefore.getDate() - 1);
+        notifications.push({
+          order_id: order.id, notification_type: 'DAY_BEFORE_PAYMENT_IN', channel: 'dashboard',
+          scheduled_at: dayBefore.toISOString(), title: `Jutro termin platnosci: ${nr}`,
+          message: `Jutro uplywa termin platnosci od klienta za zlecenie ${nr}. Kwota: ${order.price_amount||'?'} ${order.price_currency||'EUR'}.`,
+          status: 'PENDING'
+        });
+        const carrierDays = parseInt(order.carrier_payment_days) || 45;
+        const carrierDue = new Date(); carrierDue.setDate(carrierDue.getDate() + carrierDays);
+        const carrierBefore = new Date(carrierDue); carrierBefore.setDate(carrierBefore.getDate() - 1);
+        notifications.push({
+          order_id: order.id, notification_type: 'DAY_BEFORE_PAYMENT_OUT', channel: 'dashboard',
+          scheduled_at: carrierBefore.toISOString(), title: `Platnosc dla przewoznika: ${nr}`,
+          message: `Jutro termin platnosci dla przewoznika za zlecenie ${nr}. Kwota: ${order.price_carrier||'?'} ${order.price_currency||'EUR'}.`,
+          status: 'PENDING'
+        });
+      }
+
+      return notifications;
+    }
+
+    // ==================== NOTIFICATIONS PANEL ====================
+    function NotificationsPanel({ addToast, onRefresh }) {
+      const [notifications, setNotifications] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [filter, setFilter] = useState('all'); // all, pending, read
+
+      const fetchNotifications = useCallback(async () => {
+        setLoading(true);
+        let q = sb.from('notifications').select('*').order('scheduled_at', { ascending: false }).limit(100);
+        if (filter === 'pending') q = q.in('status', ['PENDING']);
+        if (filter === 'read') q = q.in('status', ['READ','SENT']);
+        const { data, error } = await q;
+        if (error) addToast('Blad ladowania powiadomien: ' + error.message, 'error');
+        setNotifications(data || []);
+        setLoading(false);
+      }, [filter]);
+
+      useEffect(() => { fetchNotifications(); }, [filter]);
+
+      const markAsRead = async (id) => {
+        await sb.from('notifications').update({ status: 'READ', sent_at: new Date().toISOString() }).eq('id', id);
+        fetchNotifications();
+        onRefresh();
+      };
+
+      const markAllRead = async () => {
+        await sb.from('notifications').update({ status: 'READ', sent_at: new Date().toISOString() }).eq('status', 'PENDING');
+        addToast('Wszystkie powiadomienia oznaczone jako przeczytane', 'success');
+        fetchNotifications();
+        onRefresh();
+      };
+
+      const deleteNotification = async (id) => {
+        await sb.from('notifications').delete().eq('id', id);
+        fetchNotifications();
+        onRefresh();
+      };
+
+      const generateScheduledNotifications = async () => {
+        addToast('Sprawdzam zaplanowane powiadomienia...', 'info');
+        const { data: orders } = await sb.from('orders').select('*').not('status', 'in', '(cancelled,paid)');
+        let count = 0;
+        const today = new Date();
+        for (const order of (orders||[])) {
+          // Check D-1 before loading
+          if (order.loading_date) {
+            const ld = new Date(order.loading_date);
+            const diff = Math.ceil((ld - today) / 86400000);
+            if (diff === 1 || diff === 0) {
+              const { data: existing } = await sb.from('notifications').select('id')
+                .eq('order_id', order.id).eq('notification_type', 'DAY_BEFORE_LOADING').eq('status', 'PENDING');
+              if (!existing || existing.length === 0) {
+                await sb.from('notifications').insert({
+                  order_id: order.id, notification_type: 'DAY_BEFORE_LOADING', channel: 'dashboard',
+                  scheduled_at: new Date().toISOString(),
+                  title: `Jutro zaladunek: ${order.order_number}`,
+                  message: `Zaladowanie ${order.order_number} zaplanowane na ${order.loading_date}. Trasa: ${order.loading_city} -> ${order.unloading_city}.`,
+                  status: 'PENDING'
+                });
+                count++;
+              }
+            }
+          }
+        }
+        addToast(count > 0 ? `Wygenerowano ${count} nowych powiadomien` : 'Brak nowych powiadomien do wygenerowania', count > 0 ? 'success' : 'info');
+        fetchNotifications();
+        onRefresh();
+      };
+
+      const formatDate = d => {
+        if (!d) return '-';
+        const dt = new Date(d);
+        const now = new Date();
+        const diffMs = now - dt;
+        if (diffMs < 60000) return 'Przed chwila';
+        if (diffMs < 3600000) return `${Math.floor(diffMs/60000)} min temu`;
+        if (diffMs < 86400000) return `${Math.floor(diffMs/3600000)} godz temu`;
+        if (diffMs < 0) {
+          const futureDays = Math.ceil(-diffMs / 86400000);
+          return `Za ${futureDays} dni`;
+        }
+        return dt.toLocaleDateString('pl-PL') + ' ' + dt.toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' });
+      };
+
+      const pending = notifications.filter(n => n.status === 'PENDING');
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+            <h2 style={{fontSize:22,fontWeight:600}}>Powiadomienia</h2>
+            <div style={{display:'flex',gap:8}}>
+              <button className="btn btn-primary" onClick={generateScheduledNotifications} style={{fontSize:12}}>Sprawdz zaplanowane</button>
+              {pending.length > 0 && <button className="btn btn-ghost" onClick={markAllRead} style={{fontSize:12}}>Oznacz wszystkie jako przeczytane</button>}
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:8,marginBottom:20}}>
+            {[{v:'all',l:'Wszystkie'},{v:'pending',l:'Oczekujace'},{v:'read',l:'Przeczytane'}].map(f => (
+              <button key={f.v} className={`btn ${filter===f.v?'btn-primary':'btn-ghost'}`} style={{fontSize:12,padding:'6px 14px'}} onClick={()=>setFilter(f.v)}>{f.l}</button>
+            ))}
+          </div>
+
+          {loading ? <div style={{textAlign:'center',padding:60}}><div className="spinner"/></div> :
+           notifications.length === 0 ? (
+            <div className="card" style={{textAlign:'center',padding:'60px 20px'}}>
+              <div style={{fontSize:48,marginBottom:12}}>{'\u{1F514}'}</div>
+              <div style={{color:'var(--text-dim)',fontSize:14}}>Brak powiadomien</div>
+            </div>
+           ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {notifications.map(n => (
+                <div key={n.id} className="card" style={{
+                  padding:'14px 18px', display:'flex', alignItems:'flex-start', gap:14,
+                  borderLeft: n.status==='PENDING' ? '3px solid var(--accent-orange)' : '3px solid transparent',
+                  opacity: n.status==='PENDING' ? 1 : 0.65, transition: 'all .2s'
+                }}>
+                  <div style={{fontSize:22,flexShrink:0,marginTop:2}}>
+                    {NOTIF_TYPE_ICONS[n.notification_type] || '\u{1F514}'}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:4}}>
+                      <div style={{fontWeight:600,fontSize:14}}>{n.title || NOTIF_TYPE_LABELS[n.notification_type] || n.notification_type}</div>
+                      <div style={{fontSize:11,color:'var(--text-dim)',flexShrink:0}}>{formatDate(n.scheduled_at)}</div>
+                    </div>
+                    <div style={{fontSize:13,color:'var(--text-muted)',lineHeight:1.5}}>{n.message}</div>
+                    <div style={{display:'flex',gap:8,marginTop:8}}>
+                      <span style={{fontSize:10,padding:'2px 8px',borderRadius:4,background:n.status==='PENDING'?'rgba(245,158,11,.15)':'rgba(34,197,94,.1)',color:n.status==='PENDING'?'var(--accent-orange)':'var(--accent-green)',fontWeight:600}}>
+                        {n.status}
+                      </span>
+                      <span style={{fontSize:10,padding:'2px 8px',borderRadius:4,background:'rgba(99,102,241,.1)',color:'var(--accent-blue)'}}>
+                        {NOTIF_TYPE_LABELS[n.notification_type] || n.notification_type}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:4,flexShrink:0}}>
+                    {n.status === 'PENDING' && (
+                      <button className="btn-icon" onClick={()=>markAsRead(n.id)} title="Oznacz jako przeczytane" style={{fontSize:14}}>{'\u2705'}</button>
+                    )}
+                    <button className="btn-icon" onClick={()=>deleteNotification(n.id)} title="Usun" style={{fontSize:14,color:'var(--accent-red)'}}>{'\u2716'}</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+           )}
+        </div>
+      );
+    }
+
+    // ==================== RENDER ====================
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
+</body>
+</html>

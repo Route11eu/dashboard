@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Route11 · Document Upload</title>
+  <link rel="icon" type="image/png" href="https://loads.route11.eu/favicon.png">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0e14; --card: #13161f; --border: #1e2332;
+      --blue: #3b82f6; --green: #22c55e; --red: #ef4444;
+      --text: #e4e7ef; --dim: #8b95a5;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { max-width: 500px; width: 100%; padding: 24px; }
+    .logo { text-align: center; margin-bottom: 32px; }
+    .logo h1 { font-size: 28px; font-weight: 700; color: var(--blue); }
+    .logo p { color: var(--dim); font-size: 13px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+    .order-info { background: rgba(59,130,246,.06); border: 1px solid rgba(59,130,246,.15); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
+    .order-info .nr { font-size: 20px; font-weight: 700; color: var(--blue); }
+    .order-info .type { font-size: 13px; color: var(--dim); margin-top: 4px; text-transform: uppercase; }
+    .lang-bar { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; flex-wrap: wrap; }
+    .lang-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 20px; background: transparent; color: var(--dim); font-size: 11px; cursor: pointer; font-family: inherit; transition: all .2s; }
+    .lang-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .dropzone { border: 2px dashed var(--border); border-radius: 12px; padding: 40px 20px; text-align: center; cursor: pointer; transition: all .3s; margin-bottom: 20px; }
+    .dropzone:hover, .dropzone.drag-over { border-color: var(--blue); background: rgba(59,130,246,.04); }
+    .dropzone .icon { font-size: 48px; margin-bottom: 12px; }
+    .dropzone .main-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .dropzone .sub-text { font-size: 12px; color: var(--dim); }
+    .file-preview { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2); border-radius: 10px; margin-bottom: 20px; }
+    .file-preview .fname { font-size: 13px; font-weight: 600; flex: 1; word-break: break-all; }
+    .file-preview .fsize { font-size: 11px; color: var(--dim); }
+    .file-preview .remove { background: none; border: none; color: var(--red); cursor: pointer; font-size: 16px; padding: 4px; }
+    input[type="file"] { display: none; }
+    label { display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px; text-transform: uppercase; }
+    textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-family: inherit; font-size: 13px; resize: vertical; min-height: 60px; margin-bottom: 20px; }
+    textarea:focus { outline: none; border-color: var(--blue); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; }
+    .btn-upload { background: var(--blue); color: #fff; }
+    .btn-upload:hover { background: #2563eb; transform: translateY(-1px); }
+    .btn-upload:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .success { text-align: center; padding: 40px 20px; }
+    .success .check { font-size: 64px; margin-bottom: 16px; }
+    .success h2 { color: var(--green); margin-bottom: 8px; }
+    .success p { color: var(--dim); font-size: 14px; }
+    .error { padding: 12px 16px; background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2); border-radius: 10px; color: var(--red); font-size: 13px; margin-bottom: 16px; text-align: center; }
+    .progress { height: 4px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 20px; }
+    .progress-bar { height: 100%; background: var(--blue); border-radius: 4px; transition: width .3s; }
+    .expired-msg { text-align: center; padding: 40px 20px; }
+    .expired-msg .icon { font-size: 48px; margin-bottom: 16px; }
+    .expired-msg h2 { color: var(--red); margin-bottom: 8px; }
+    @media (max-width: 540px) { .container { padding: 16px; } .card { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1>ROUTE11</h1>
+      <p>Transport Management System</p>
+    </div>
+    <div class="card" id="app">
+      <div style="text-align:center;padding:40px;color:var(--dim)">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== TRANSLATIONS ====================
+    const T = {
+      en: {
+        upload_title: 'Upload Document',
+        order: 'Transport Order',
+        doc_type: 'Document type',
+        drag_drop: 'Drag & drop your file here',
+        or_click: 'or click to browse',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Comment (optional)',
+        comment_ph: 'Additional information...',
+        upload_btn: 'Upload Document',
+        uploading: 'Uploading...',
+        success_title: 'Document Uploaded!',
+        success_msg: 'Thank you. The document has been received and saved.',
+        expired_title: 'Link Expired',
+        expired_msg: 'This upload link has expired or has already been used. Please contact us for a new link.',
+        invalid_title: 'Invalid Link',
+        invalid_msg: 'This upload link is invalid. Please check the URL or contact us.',
+        error_no_file: 'Please select a file to upload.',
+        error_too_big: 'File is too large. Maximum size is 25MB.',
+        contact: 'Questions? Contact us at office@route11.eu',
+        cmr: 'CMR', invoice: 'Invoice', waybill: 'Waybill', weight_ticket: 'Weight Ticket', other: 'Other'
+      },
+      pl: {
+        upload_title: 'Wgraj dokument',
+        order: 'Zlecenie transportowe',
+        doc_type: 'Typ dokumentu',
+        drag_drop: 'Przeciagnij plik tutaj',
+        or_click: 'lub kliknij aby wybrac',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Komentarz (opcjonalnie)',
+        comment_ph: 'Dodatkowe informacje...',
+        upload_btn: 'Wgraj dokument',
+        uploading: 'Wysylanie...',
+        success_title: 'Dokument wgrany!',
+        success_msg: 'Dziekujemy. Dokument zostal odebrany i zapisany.',
+        expired_title: 'Link wygasl',
+        expired_msg: 'Ten link do wgrywania wygasl lub zostal juz uzyty. Skontaktuj sie z nami po nowy link.',
+        invalid_title: 'Nieprawidlowy link',
+        invalid_msg: 'Ten link jest nieprawidlowy. Sprawdz adres URL lub skontaktuj sie z nami.',
+        error_no_file: 'Wybierz plik do wgrania.',
+        error_too_big: 'Plik jest za duzy. Maksymalny rozmiar to 25MB.',
+        contact: 'Pytania? Kontakt: office@route11.eu',
+        cmr: 'CMR', invoice: 'Faktura', waybill: 'List przewozowy', weight_ticket: 'Kwit wagowy', other: 'Inny'
+      },
+      es: {
+        upload_title: 'Subir documento',
+        order: 'Orden de transporte',
+        doc_type: 'Tipo de documento',
+        drag_drop: 'Arrastra y suelta tu archivo aqui',
+        or_click: 'o haz clic para buscar',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Comentario (opcional)',
+        comment_ph: 'Informacion adicional...',
+        upload_btn: 'Subir documento',
+        uploading: 'Subiendo...',
+        success_title: 'Documento subido!',
+        success_msg: 'Gracias. El documento ha sido recibido y guardado.',
+        expired_title: 'Enlace caducado',
+        expired_msg: 'Este enlace ha caducado o ya ha sido utilizado. Contactenos para un nuevo enlace.',
+        invalid_title: 'Enlace invalido',
+        invalid_msg: 'Este enlace no es valido. Verifique la URL o contactenos.',
+        error_no_file: 'Seleccione un archivo para subir.',
+        error_too_big: 'El archivo es demasiado grande. Tamano maximo 25MB.',
+        contact: 'Preguntas? Contactenos: office@route11.eu',
+        cmr: 'CMR', invoice: 'Factura', waybill: 'Carta de porte', weight_ticket: 'Ticket de peso', other: 'Otro'
+      },
+      it: {
+        upload_title: 'Carica documento',
+        order: 'Ordine di trasporto',
+        doc_type: 'Tipo di documento',
+        drag_drop: 'Trascina il file qui',
+        or_click: 'o clicca per cercare',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Commento (opzionale)',
+        comment_ph: 'Informazioni aggiuntive...',
+        upload_btn: 'Carica documento',
+        uploading: 'Caricamento...',
+        success_title: 'Documento caricato!',
+        success_msg: 'Grazie. Il documento e stato ricevuto e salvato.',
+        expired_title: 'Link scaduto',
+        expired_msg: 'Questo link e scaduto o e gia stato utilizzato. Contattaci per un nuovo link.',
+        invalid_title: 'Link non valido',
+        invalid_msg: 'Questo link non e valido. Controlla l\'URL o contattaci.',
+        error_no_file: 'Seleziona un file da caricare.',
+        error_too_big: 'Il file e troppo grande. Dimensione massima 25MB.',
+        contact: 'Domande? Contattaci: office@route11.eu',
+        cmr: 'CMR', invoice: 'Fattura', waybill: 'Lettera di vettura', weight_ticket: 'Biglietto peso', other: 'Altro'
+      },
+      de: {
+        upload_title: 'Dokument hochladen',
+        order: 'Transportauftrag',
+        doc_type: 'Dokumenttyp',
+        drag_drop: 'Datei hierher ziehen',
+        or_click: 'oder klicken zum Durchsuchen',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Kommentar (optional)',
+        comment_ph: 'Zusatzliche Informationen...',
+        upload_btn: 'Dokument hochladen',
+        uploading: 'Wird hochgeladen...',
+        success_title: 'Dokument hochgeladen!',
+        success_msg: 'Vielen Dank. Das Dokument wurde empfangen und gespeichert.',
+        expired_title: 'Link abgelaufen',
+        expired_msg: 'Dieser Upload-Link ist abgelaufen oder wurde bereits verwendet. Kontaktieren Sie uns fur einen neuen Link.',
+        invalid_title: 'Ungultiger Link',
+        invalid_msg: 'Dieser Link ist ungultig. Uberprufen Sie die URL oder kontaktieren Sie uns.',
+        error_no_file: 'Bitte wahlen Sie eine Datei zum Hochladen.',
+        error_too_big: 'Datei ist zu gross. Maximale Grosse ist 25MB.',
+        contact: 'Fragen? Kontakt: office@route11.eu',
+        cmr: 'CMR', invoice: 'Rechnung', waybill: 'Frachtbrief', weight_ticket: 'Wiegeschein', other: 'Sonstiges'
+      },
+      cz: {
+        upload_title: 'Nahrat dokument',
+        order: 'Prepravni objednavka',
+        doc_type: 'Typ dokumentu',
+        drag_drop: 'Pretahnete soubor sem',
+        or_click: 'nebo kliknete pro vyber',
+        formats: 'PDF, JPG, PNG — max 25MB',
+        comment: 'Komentar (nepovinne)',
+        comment_ph: 'Dalsi informace...',
+        upload_btn: 'Nahrat dokument',
+        uploading: 'Nahravam...',
+        success_title: 'Dokument nahran!',
+        success_msg: 'Dekujeme. Dokument byl prijat a ulozen.',
+        expired_title: 'Odkaz vyprsel',
+        expired_msg: 'Tento odkaz vyprsel nebo jiz byl pouzit. Kontaktujte nas pro novy odkaz.',
+        invalid_title: 'Neplatny odkaz',
+        invalid_msg: 'Tento odkaz neni platny. Zkontrolujte URL nebo nas kontaktujte.',
+        error_no_file: 'Vyberte soubor k nahrani.',
+        error_too_big: 'Soubor je prilis velky. Maximalni velikost je 25MB.',
+        contact: 'Otazky? Kontakt: office@route11.eu',
+        cmr: 'CMR', invoice: 'Faktura', waybill: 'Nakladni list', weight_ticket: 'Vazni listek', other: 'Jiny'
+      }
+    };
+
+    // ==================== APP LOGIC ====================
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5CijuG7VcMW1fS9CwQI7QBsR2iotKrtxaNQbU0QCHse9RODMCeIx3g-jr3yXv5UM/exec';
+    const SUPABASE_URL = 'https://uiobkkocziqhvmqqzior.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpb2Jra29jemlxaHZtcXF6aW9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyOTY3MTgsImV4cCI6MjA5MDg3MjcxOH0.yYbxK8GpK7KbGpRMCXSEtJOawPSSYTo07aKayzgn8v4';
+
+    let currentLang = 'en';
+    let selectedFile = null;
+    let tokenData = null;
+
+    function t(key) { return (T[currentLang] || T.en)[key] || T.en[key] || key; }
+
+    function detectLanguage() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('lang') && T[params.get('lang')]) return params.get('lang');
+      const browserLang = (navigator.language || '').slice(0,2).toLowerCase();
+      const langMap = { pl:'pl', es:'es', it:'it', de:'de', cs:'cz', sk:'cz', fr:'en' };
+      return langMap[browserLang] || 'en';
+    }
+
+    function getParams() {
+      const p = new URLSearchParams(window.location.search);
+      return { token: p.get('token'), type: p.get('type') || 'cmr', order: p.get('order') || '' };
+    }
+
+    async function init() {
+      currentLang = detectLanguage();
+      const params = getParams();
+
+      if (!params.token) {
+        renderInvalid();
+        return;
+      }
+
+      // Validate token
+      // For now, render the upload form directly (token validation happens on submit)
+      tokenData = params;
+      renderUploadForm();
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      if (tokenData) renderUploadForm();
+    }
+
+    function renderLangBar() {
+      const langs = [
+        {code:'en',label:'English'},{code:'pl',label:'Polski'},{code:'de',label:'Deutsch'},
+        {code:'es',label:'Espanol'},{code:'it',label:'Italiano'},{code:'cz',label:'Cesky'}
+      ];
+      return `<div class="lang-bar">${langs.map(l => 
+        `<button class="lang-btn ${l.code===currentLang?'active':''}" onclick="setLang('${l.code}')">${l.label}</button>`
+      ).join('')}</div>`;
+    }
+
+    function renderUploadForm() {
+      const app = document.getElementById('app');
+      app.innerHTML = `
+        ${renderLangBar()}
+        <div class="order-info">
+          <div class="type">${t('order')}</div>
+          <div class="nr">${tokenData.order || '---'}</div>
+        </div>
+        <h2 style="font-size:18px;margin-bottom:20px;text-align:center">${t('upload_title')}</h2>
+
+        <div id="error-msg" class="error" style="display:none"></div>
+
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleDrop(event)">
+          <div class="icon">📄</div>
+          <div class="main-text">${t('drag_drop')}</div>
+          <div class="sub-text">${t('or_click')}</div>
+          <div class="sub-text" style="margin-top:8px">${t('formats')}</div>
+        </div>
+        <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="handleFileSelect(this.files[0])">
+
+        <div id="file-preview" style="display:none"></div>
+
+        <div id="progress" class="progress" style="display:none"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+
+        <label>${t('doc_type')}</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          ${['cmr','invoice','waybill','weight_ticket','other'].map(dt => 
+            `<button class="lang-btn ${dt===tokenData.type?'active':''}" onclick="selectDocType('${dt}')" id="dt-${dt}">${t(dt)}</button>`
+          ).join('')}
+        </div>
+
+        <label>${t('comment')}</label>
+        <textarea id="comment" placeholder="${t('comment_ph')}"></textarea>
+
+        <button class="btn btn-upload" id="upload-btn" onclick="handleUpload()">${t('upload_btn')}</button>
+
+        <p style="text-align:center;margin-top:20px;font-size:11px;color:var(--dim)">${t('contact')}</p>
+      `;
+    }
+
+    function selectDocType(dt) {
+      tokenData.type = dt;
+      document.querySelectorAll('[id^="dt-"]').forEach(el => el.classList.remove('active'));
+      document.getElementById('dt-' + dt).classList.add('active');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+      if (e.dataTransfer.files.length > 0) handleFileSelect(e.dataTransfer.files[0]);
+    }
+
+    function handleFileSelect(file) {
+      if (!file) return;
+      if (file.size > 25 * 1024 * 1024) { showError(t('error_too_big')); return; }
+      selectedFile = file;
+      const preview = document.getElementById('file-preview');
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      preview.style.display = 'flex';
+      preview.innerHTML = `
+        <div class="fname">${file.name}</div>
+        <div class="fsize">${sizeMB} MB</div>
+        <button class="remove" onclick="clearFile()">✕</button>
+      `;
+      document.getElementById('dropzone').style.display = 'none';
+      hideError();
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      document.getElementById('file-preview').style.display = 'none';
+      document.getElementById('dropzone').style.display = 'block';
+      document.getElementById('fileInput').value = '';
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg; el.style.display = 'block';
+    }
+    function hideError() {
+      document.getElementById('error-msg').style.display = 'none';
+    }
+
+    async function handleUpload() {
+      if (!selectedFile) { showError(t('error_no_file')); return; }
+      hideError();
+
+      const btn = document.getElementById('upload-btn');
+      btn.disabled = true; btn.textContent = t('uploading');
+      const progress = document.getElementById('progress');
+      const progressBar = document.getElementById('progress-bar');
+      progress.style.display = 'block';
+      progressBar.style.width = '30%';
+
+      try {
+        // Read file as base64
+        const base64 = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result.split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(selectedFile);
+        });
+
+        progressBar.style.width = '60%';
+
+        // Upload to Google Apps Script
+        if (GAS_URL) {
+          const resp = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'uploadPublic',
+              token: tokenData.token,
+              fileName: selectedFile.name,
+              mimeType: selectedFile.type,
+              base64Content: base64
+            })
+          });
+          const result = await resp.json();
+          if (result.error) throw new Error(result.error);
+          progressBar.style.width = '80%';
+
+          // Save to Supabase order_documents
+          await fetch(SUPABASE_URL + '/rest/v1/order_documents', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_KEY,
+              'Authorization': 'Bearer ' + SUPABASE_KEY,
+              'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+              order_id: null, // Will be linked by order number
+              document_type: tokenData.type,
+              file_name: selectedFile.name,
+              file_url: result.file?.fileUrl || '',
+              drive_file_id: result.file?.fileId || '',
+              uploaded_by: 'carrier:' + (tokenData.order || 'unknown'),
+              upload_token: tokenData.token
+            })
+          });
+        }
+
+        progressBar.style.width = '100%';
+        setTimeout(() => renderSuccess(), 500);
+
+      } catch(err) {
+        showError('Upload error: ' + err.message);
+        btn.disabled = false; btn.textContent = t('upload_btn');
+        progress.style.display = 'none';
+      }
+    }
+
+    function renderSuccess() {
+      document.getElementById('app').innerHTML = `
+        ${renderLangBar()}
+        <div class="success">
+          <div class="check">✓</div>
+          <h2>${t('success_title')}</h2>
+          <p>${t('success_msg')}</p>
+          <p style="margin-top:12px;font-weight:600">${tokenData.order}</p>
+        </div>
+        <p style="text-align:center;margin-top:20px;font-size:11px;color:var(--dim)">${t('contact')}</p>
+      `;
+    }
+
+    function renderExpired() {
+      document.getElementById('app').innerHTML = `
+        ${renderLangBar()}
+        <div class="expired-msg">
+          <div class="icon">⏰</div>
+          <h2>${t('expired_title')}</h2>
+          <p>${t('expired_msg')}</p>
+        </div>
+        <p style="text-align:center;margin-top:20px;font-size:11px;color:var(--dim)">${t('contact')}</p>
+      `;
+    }
+
+    function renderInvalid() {
+      document.getElementById('app').innerHTML = `
+        <div class="expired-msg">
+          <div class="icon">⚠️</div>
+          <h2>${T.en.invalid_title}</h2>
+          <p>${T.en.invalid_msg}</p>
+        </div>
+        <p style="text-align:center;margin-top:20px;font-size:11px;color:var(--dim)">${T.en.contact}</p>
+      `;
+    }
+
+    // Init on load
+    init();
+  </script>
+</body>
+</html>
