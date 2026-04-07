@@ -1006,14 +1006,14 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
 
       useEffect(() => { if (tab === 'dokumenty') loadDocs(); }, [tab]);
 
+      const gasPost = async (body) => {
+        const resp = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(body) });
+        return resp.json();
+      };
+
       const createDriveFolder = async () => {
         try {
-          const resp = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'createFolder', orderNumber: o.order_number })
-          });
-          const result = await resp.json();
+          const result = await gasPost({ action: 'createFolder', orderNumber: o.order_number });
           if (result.folderId) {
             await sb.from('orders').update({ drive_folder_id: result.folderId }).eq('id', o.id);
             setO(prev => ({...prev, drive_folder_id: result.folderId}));
@@ -1035,12 +1035,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
           const base64 = await new Promise((ok, fail) => {
             const r = new FileReader(); r.onload = () => ok(r.result.split(',')[1]); r.onerror = fail; r.readAsDataURL(file);
           });
-          const resp = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'upload', folderId, fileName: file.name, mimeType: file.type, base64Content: base64, documentType: docType })
-          });
-          const result = await resp.json();
+          const result = await gasPost({ action: 'upload', folderId, fileName: file.name, mimeType: file.type, base64Content: base64, documentType: docType });
           if (result.fileId) {
             await sb.from('order_documents').insert({
               order_id: o.id, document_type: docType, file_name: file.name,
@@ -1057,27 +1052,32 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const sendCMRRequest = async () => {
         if (!o.carrier_email) { addToast('Brak emaila przewoznika!', 'error'); return; }
         try {
-          const tokenResp = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'generateUploadToken', orderNumber: o.order_number, documentType: 'cmr' })
-          });
-          const tokenResult = await tokenResp.json();
+          addToast('Wysylanie prosby o CMR...', 'info');
+          const tokenResult = await gasPost({ action: 'generateUploadToken', orderNumber: o.order_number, documentType: 'cmr' });
           const assignedUser = TEAM_USERS.find(u => u.id === o.assigned_user);
-          await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'sendEmail',
-              to: o.carrier_email,
-              cc: (assignedUser?.email || '') + ',' + PLANNING_EMAIL,
-              subject: 'CMR Request - ' + o.order_number + ' - Route 11',
-              htmlBody: `<div style="font-family:Arial;max-width:600px;margin:0 auto"><div style="background:#0c0e14;padding:20px;text-align:center"><h1 style="color:#3b82f6;margin:0">ROUTE11</h1></div><div style="padding:24px;background:#f8f9fa"><p>Dear ${o.carrier_name||'Partner'},</p><p>Please upload the CMR document for transport order <b>${o.order_number}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${tokenResult.uploadUrl}" style="background:#3b82f6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Upload CMR Document</a></div><p style="color:#666;font-size:13px">This link is valid for 72 hours.</p></div></div>`,
-              textBody: 'Please upload CMR for order ' + o.order_number
-            })
+          await gasPost({
+            action: 'sendEmail',
+            to: o.carrier_email,
+            cc: (assignedUser?.email || '') + ',' + PLANNING_EMAIL,
+            subject: 'CMR Request - ' + o.order_number + ' - Route 11',
+            htmlBody: `<div style="font-family:Arial;max-width:600px;margin:0 auto"><div style="background:#0c0e14;padding:20px;text-align:center"><h1 style="color:#3b82f6;margin:0">ROUTE11</h1></div><div style="padding:24px;background:#f8f9fa"><p>Dear ${o.carrier_name||'Partner'},</p><p>Please upload the CMR document for transport order <b>${o.order_number}</b>.</p><div style="text-align:center;margin:24px 0"><a href="${tokenResult.uploadUrl}" style="background:#3b82f6;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">Upload CMR Document</a></div><p style="color:#666;font-size:13px">This link is valid for 72 hours.</p></div></div>`,
+            textBody: 'Please upload CMR for order ' + o.order_number
           });
-          addToast('Prośba o CMR wysłana do ' + o.carrier_email + '!', 'success');
+          addToast('Prosba o CMR wyslana na ' + o.carrier_email + '!', 'success');
         } catch(e) { addToast('Blad wysylki: ' + e.message, 'error'); }
+      };
+
+      const sendWhatsAppCMR = async () => {
+        if (!o.carrier_phone) { addToast('Brak telefonu przewoznika!', 'error'); return; }
+        try {
+          addToast('Wysylanie WhatsApp...', 'info');
+          await gasPost({
+            action: 'sendWhatsApp',
+            phone: o.carrier_phone.replace(/[^0-9]/g, ''),
+            message: 'Dear ' + (o.carrier_name||'Partner') + ', please send CMR for order ' + o.order_number + '. You can upload it here: https://dashboard.route11.eu/upload.html - Route 11'
+          });
+          addToast('WhatsApp wyslany do ' + o.carrier_phone + '!', 'success');
+        } catch(e) { addToast('Blad WhatsApp: ' + e.message, 'error'); }
       };
 
       const priceClient = parseFloat(o.price_amount) || 0;
@@ -1171,14 +1171,14 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
             <div>
               <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
                 <button className="btn btn-primary btn-sm" onClick={createDriveFolder} disabled={!!o.drive_folder_id}>
-                  {o.drive_folder_id ? '\u2705 Folder Drive' : '\ud83d\udcc1 Utwórz folder Drive'}
+                  {o.drive_folder_id ? String.fromCodePoint(0x2705)+' Folder Drive' : String.fromCodePoint(0x1F4C1)+' Utwórz folder Drive'}
                 </button>
                 {o.drive_folder_id && (
                   <a href={`https://drive.google.com/drive/folders/${o.drive_folder_id}`} target="_blank" className="btn btn-ghost btn-sm">Otwórz na Drive</a>
                 )}
-                <button className="btn btn-sm" style={{background:'var(--accent-orange)',color:'#fff'}} onClick={sendCMRRequest}>\ud83d\udce7 Wyślij prośbę o CMR</button>
+                <button className="btn btn-sm" style={{background:'var(--accent-orange)',color:'#fff'}} onClick={sendCMRRequest}>{String.fromCodePoint(0x1F4E7)} Wyslij prosbe o CMR</button>
                 {o.carrier_phone && (
-                  <a href={`https://wa.me/${(o.carrier_phone||'').replace(/[^0-9+]/g,'')}?text=${encodeURIComponent('Dear '+( o.carrier_name||'Partner')+', please send CMR for order '+o.order_number)}`} target="_blank" className="btn btn-sm" style={{background:'#25d366',color:'#fff'}}>WhatsApp CMR</a>
+                  <button className="btn btn-sm" style={{background:'#25d366',color:'#fff'}} onClick={sendWhatsAppCMR}>{String.fromCodePoint(0x1F4AC)} WhatsApp CMR</button>
                 )}
               </div>
 
@@ -1187,7 +1187,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
                 <div style={{border:'2px dashed var(--border)',borderRadius:12,padding:20,textAlign:'center',cursor:'pointer'}} onClick={()=>document.getElementById('doc-upload-input').click()}
                   onDragOver={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--accent-blue)'}} onDragLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
                   onDrop={e=>{e.preventDefault();e.currentTarget.style.borderColor='var(--border)';if(e.dataTransfer.files[0])uploadDocToDrive(e.dataTransfer.files[0],'other')}}>
-                  {uploading ? <span>Wysylanie...</span> : <span>\ud83d\udcc4 Przeciagnij plik lub kliknij (PDF, JPG, PNG)</span>}
+                  {uploading ? <span>Wysylanie...</span> : <span>{String.fromCodePoint(0x1F4C4)} Przeciagnij plik lub kliknij (PDF, JPG, PNG)</span>}
                 </div>
                 <input type="file" id="doc-upload-input" style={{display:'none'}} accept=".pdf,.jpg,.jpeg,.png" onChange={e=>{if(e.target.files[0]){const t=prompt('Typ dokumentu:\n1=CMR\n2=Faktura\n3=List przewozowy\n4=Inny','1');const typeMap={'1':'cmr','2':'invoice','3':'waybill','4':'other'};uploadDocToDrive(e.target.files[0],typeMap[t]||'other');e.target.value=''}}}/>
               </div>
@@ -1572,7 +1572,6 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
           try {
             const resp = await fetch(GAS_URL, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'createFolder', orderNumber: orderNum })
             });
             const folderResult = await resp.json();
@@ -1596,7 +1595,6 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
               });
               await fetch(GAS_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   action: 'upload', folderId: savedOrder.drive_folder_id,
                   fileName: orderNum + '_transport_order.pdf', mimeType: 'application/pdf',
