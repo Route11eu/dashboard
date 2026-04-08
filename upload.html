@@ -211,8 +211,10 @@
     let currentLang = 'en';
     let selectedFile = null;
     let tokenData = null;
+    let resolvedOrderId = null;
 
     function t(key) { return (T[currentLang] || T.en)[key] || T.en[key] || key; }
+    function esc(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
     function detectLanguage() {
       const params = new URLSearchParams(window.location.search);
@@ -231,13 +233,29 @@
       currentLang = detectLanguage();
       const params = getParams();
 
-      if (!params.token) {
-        renderInvalid();
-        return;
+      if (!params.token) { renderInvalid(); return; }
+
+      // Pre-validate token before showing form
+      try {
+        const resp = await fetch(GAS_URL + '?action=validateToken&token=' + encodeURIComponent(params.token));
+        const validation = await resp.json();
+        if (!validation.valid) { renderExpired(); return; }
+      } catch(e) {
+        // If validation fails (network), show form anyway — GAS will validate on submit
+        console.warn('Token pre-validation failed:', e);
       }
 
-      // Validate token
-      // For now, render the upload form directly (token validation happens on submit)
+      // Resolve order_id from order number
+      if (params.order) {
+        try {
+          const oResp = await fetch(SUPABASE_URL + '/rest/v1/orders?order_number=eq.' + encodeURIComponent(params.order) + '&select=id&limit=1', {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+          });
+          const orders = await oResp.json();
+          if (orders && orders[0]) resolvedOrderId = orders[0].id;
+        } catch(e) { console.warn('Order lookup failed:', e); }
+      }
+
       tokenData = params;
       renderUploadForm();
     }
@@ -263,7 +281,7 @@
         ${renderLangBar()}
         <div class="order-info">
           <div class="type">${t('order')}</div>
-          <div class="nr">${tokenData.order || '---'}</div>
+          <div class="nr">${esc(tokenData.order) || '---'}</div>
         </div>
         <h2 style="font-size:18px;margin-bottom:20px;text-align:center">${t('upload_title')}</h2>
 
@@ -365,43 +383,41 @@
 
         progressBar.style.width = '60%';
 
-        // Upload to Google Apps Script
-        if (GAS_URL) {
-          const resp = await fetch(GAS_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'uploadPublic',
-              token: tokenData.token,
-              fileName: selectedFile.name,
-              mimeType: selectedFile.type,
-              base64Content: base64
-            })
-          });
-          const result = await resp.json();
-          if (result.error) throw new Error(result.error);
-          progressBar.style.width = '80%';
+        // Upload to Google Apps Script (no Content-Type header to avoid CORS preflight)
+        const resp = await fetch(GAS_URL, {
+          method: 'POST',
+          body: JSON.stringify({
+            action: 'uploadPublic',
+            token: tokenData.token,
+            fileName: selectedFile.name,
+            mimeType: selectedFile.type,
+            base64Content: base64
+          })
+        });
+        const result = await resp.json();
+        if (result.error) throw new Error(result.error);
+        progressBar.style.width = '80%';
 
-          // Save to Supabase order_documents
-          await fetch(SUPABASE_URL + '/rest/v1/order_documents', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': SUPABASE_KEY,
-              'Authorization': 'Bearer ' + SUPABASE_KEY,
-              'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify({
-              order_id: null, // Will be linked by order number
-              document_type: tokenData.type,
-              file_name: selectedFile.name,
-              file_url: result.file?.fileUrl || '',
-              drive_file_id: result.file?.fileId || '',
-              uploaded_by: 'carrier:' + (tokenData.order || 'unknown'),
-              upload_token: tokenData.token
-            })
-          });
-        }
+        // Save to Supabase order_documents with proper order_id linkage
+        await fetch(SUPABASE_URL + '/rest/v1/order_documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            order_id: resolvedOrderId,
+            document_type: tokenData.type,
+            file_name: selectedFile.name,
+            file_url: result.file?.fileUrl || '',
+            drive_file_id: result.file?.fileId || '',
+            drive_folder_id: result.file?.folderId || result.folderId || null,
+            uploaded_by: 'carrier:' + esc(tokenData.order || 'unknown'),
+            upload_token: tokenData.token
+          })
+        });
 
         progressBar.style.width = '100%';
         setTimeout(() => renderSuccess(), 500);

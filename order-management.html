@@ -146,10 +146,11 @@
         </div>
       ))}</div>);
     }
+    let _toastCounter = 0;
     function useToast() {
       const [toasts, setToasts] = useState([]);
       const addToast = (message, type='info') => {
-        const id = Date.now();
+        const id = ++_toastCounter;
         setToasts(p => [...p, {id, message, type}]);
         setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
       };
@@ -907,7 +908,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
 
       if (view === 'upload') return <OrderUpload addToast={addToast} onResult={handleOCRResult} onCancel={() => setView('list')}/>;
       if (view === 'form') return <OrderForm addToast={addToast} ocrData={ocrData} editOrder={editingOrder} onSave={handleFormSave} onCancel={handleFormCancel} currentUser={currentUser}/>;
-      if (detailOrder) return <OrderDetail order={detailOrder} addToast={addToast} onBack={() => { setDetailOrder(null); fetchOrders(); }} onEdit={(o) => { setDetailOrder(null); setEditingOrder(o); setView('form'); }}/>;
+      if (detailOrder) return <OrderDetail key={detailOrder.id+'-'+(detailOrder.updated_at||'')} order={detailOrder} addToast={addToast} onBack={() => { setDetailOrder(null); fetchOrders(); }} onEdit={(o) => { setDetailOrder(null); setEditingOrder(o); setView('form'); }}/>;
 
       return (
         <div className="fade-in">
@@ -963,11 +964,11 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
                             {ALL_STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                           </select>
                         </td>
-                        <td style={{fontSize:12}}>{o.loading_date ? new Date(o.loading_date).toLocaleDateString('pl') : '---'}</td>
+                        <td style={{fontSize:12}}>{o.loading_date ? o.loading_date.slice(0,10).split('-').reverse().join('.') : '---'}</td>
                         <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{priceClient ? `${priceClient} ${o.price_currency||'EUR'}` : '---'}</td>
                         <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{priceCarrier ? `${priceCarrier} ${o.price_currency||'EUR'}` : '---'}</td>
                         <td style={{fontFamily:'JetBrains Mono',fontSize:12,color: margin > 0 ? 'var(--accent-green)' : margin < 0 ? 'var(--accent-red)' : 'var(--text-dim)'}}>
-                          {priceClient && priceCarrier ? `${margin} (${marginPct}%)` : '---'}
+                          {priceClient > 0 && priceCarrier > 0 ? `${margin} (${marginPct}%)` : '---'}
                         </td>
                         <td onClick={e=>e.stopPropagation()}>
                           <div style={{display:'flex',gap:4}}>
@@ -1007,8 +1008,11 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       useEffect(() => { if (tab === 'dokumenty') loadDocs(); }, [tab]);
 
       const gasPost = async (body) => {
-        const resp = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(body) });
-        return resp.json();
+        const resp = await fetch(GAS_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify(body) });
+        if (!resp.ok && resp.status !== 0) throw new Error('Server error: ' + resp.status);
+        const data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        return data;
       };
 
       const createDriveFolder = async () => {
@@ -1178,7 +1182,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
                 )}
                 <button className="btn btn-sm" style={{background:'var(--accent-orange)',color:'#fff'}} onClick={sendCMRRequest}>{String.fromCodePoint(0x1F4E7)} Wyslij prosbe o CMR</button>
                 {o.carrier_phone && (
-                  <button className="btn btn-sm" style={{background:'#25d366',color:'#fff'}} onClick={sendWhatsAppCMR}>{String.fromCodePoint(0x1F4AC)} WhatsApp CMR</button>
+                  <button className="btn btn-sm" style={{background:'#25d366',color:'#fff'}} onClick={sendWhatsAppCMR} title="Wysle powiadomienie na WhatsApp zespolu">{String.fromCodePoint(0x1F4AC)} WA Powiadom zespol</button>
                 )}
               </div>
 
@@ -1417,7 +1421,13 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const [saving, setSaving] = useState(false);
 
       const buildInitForm = () => {
-        if (editOrder) return { ...editOrder };
+        if (editOrder) {
+          const eo = { ...editOrder };
+          // Parse participant_2 from notes JSON
+          if (eo.notes) { try { const n = JSON.parse(eo.notes); eo.participant_2 = n.participant_2 || ''; } catch{} }
+          if (!eo.participant_2) eo.participant_2 = '';
+          return eo;
+        }
         const d = ocrData || {};
         const cl = d.client || {};
         const ld = (d.loading && d.loading[0]) || {};
@@ -1518,7 +1528,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
 
       const handleSave = async (generatePdf = false) => {
         setSaving(true);
-        const orderNum = form.order_number || `R11-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`;
+        const orderNum = form.order_number || `R11-${new Date().getFullYear()}-${String(Math.random()).slice(2,8)}`;
         const route = `${form.loading_country||''} ${form.loading_city||''} -> ${form.unloading_country||''} ${form.unloading_city||''}`;
         const payload = {
           order_number: orderNum,
