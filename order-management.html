@@ -134,6 +134,7 @@
     const SUPABASE_URL = 'https://uiobkkocziqhvmqqzior.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpb2Jra29jemlxaHZtcXF6aW9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyOTY3MTgsImV4cCI6MjA5MDg3MjcxOH0.yYbxK8GpK7KbGpRMCXSEtJOawPSSYTo07aKayzgn8v4';
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbxc1oD62fJQT1K9mfxPfanW0Z2HMlfgPG30DoiJuHDFEXj_rv-f5wIUT0VDjfI7yY9Z/exec';
+    const API_SECRET = 'R11Dashboard2026!';
     // Per-user PINs — each team member has their own PIN
     const USER_PINS = { '1168': 'marcin', '1111': 'kuba', '2222': 'ania', '3333': 'patryk' };
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -2329,11 +2330,16 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const fetchDocuments = useCallback(async () => {
         setLoading(true);
         try {
-          const res = await fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET);
-          const data = await res.json();
+          const res = await fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET, {redirect:'follow'});
+          const text = await res.text();
+          console.log('📄 Documents raw:', text.substring(0, 200));
+          const data = JSON.parse(text);
+          console.log('📄 Documents parsed:', data.success, data.count);
           if (data.success) setDocuments(data.documents || []);
+          else console.error('📄 API error:', data.error);
         } catch (e) {
-          addToast('Błąd ładowania dokumentów', 'error');
+          console.error('📄 Fetch error:', e);
+          addToast('Błąd ładowania dokumentów: ' + e.message, 'error');
         }
         setLoading(false);
       }, []);
@@ -2458,11 +2464,16 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-          const res = await fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET);
-          const data = await res.json();
+          const res = await fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET, {redirect:'follow'});
+          const text = await res.text();
+          console.log('📋 Tasks raw:', text.substring(0, 200));
+          const data = JSON.parse(text);
+          console.log('📋 Tasks parsed:', data.success, data.count);
           if (data.success) setTasks(data.tasks || []);
+          else console.error('📋 API error:', data.error);
         } catch (e) {
-          addToast('Błąd ładowania zadań', 'error');
+          console.error('📋 Tasks fetch error:', e);
+          addToast('Błąd ładowania zadań: ' + e.message, 'error');
         }
         setLoading(false);
       }, []);
