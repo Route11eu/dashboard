@@ -324,6 +324,8 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const [page, setPage] = useState('orders');
       const [stats, setStats] = useState({ companies: 0, orders: 0 });
       const [pendingNotifications, setPendingNotifications] = useState(0);
+      const [newDocsCount, setNewDocsCount] = useState(0);
+      const [newTasksCount, setNewTasksCount] = useState(0);
 
       const refreshStats = useCallback(async () => {
         const [c, o, n] = await Promise.all([
@@ -333,6 +335,15 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
         ]);
         setStats({ companies: c.count || 0, orders: o.count || 0 });
         setPendingNotifications(n.count || 0);
+        // Fetch email automation stats
+        try {
+          const [docsRes, tasksRes] = await Promise.all([
+            fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET).then(r => r.json()).catch(() => ({documents:[]})),
+            fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET).then(r => r.json()).catch(() => ({tasks:[]}))
+          ]);
+          setNewDocsCount((docsRes.documents || []).filter(d => d.status === 'new').length);
+          setNewTasksCount((tasksRes.tasks || []).filter(t => t.status === 'new').length);
+        } catch(e) {}
       }, []);
       useEffect(() => { refreshStats(); const iv = setInterval(refreshStats, 60000); return () => clearInterval(iv); }, []);
 
@@ -370,11 +381,13 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
                 {id:'orders',label:'Zlecenia'},
                 {id:'cashflow',label:'Cash Flow'},
                 {id:'companies',label:'Firmy'},
-                {id:'notifications',label:'Powiadomienia'}
+                {id:'documents',label:'Dokumenty',badge:newDocsCount},
+                {id:'tasks',label:'Zadania',badge:newTasksCount},
+                {id:'notifications',label:'Powiadomienia',badge:pendingNotifications}
               ].map(t => (
                 <button key={t.id} className={`tab-btn ${page===t.id?'active':''}`} onClick={()=>setPage(t.id)}>
                   {t.label}
-                  {t.id==='notifications' && pendingNotifications > 0 && <span style={{marginLeft:6,background:'var(--accent-red)',color:'#fff',borderRadius:8,padding:'1px 6px',fontSize:10}}>{pendingNotifications}</span>}
+                  {t.badge > 0 && <span style={{marginLeft:6,background: t.id==='tasks' ? 'var(--accent-orange)' : t.id==='documents' ? 'var(--accent-cyan)' : 'var(--accent-red)',color:'#fff',borderRadius:8,padding:'1px 6px',fontSize:10}}>{t.badge}</span>}
                 </button>
               ))}
             </div>
@@ -384,6 +397,8 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
             {page === 'companies' && <CompanyManager addToast={addToast} onStatsChange={refreshStats}/>}
             {page === 'orders' && <OrdersModule addToast={addToast} onStatsChange={refreshStats} currentUser={currentUser}/>}
             {page === 'cashflow' && <CashFlowModule addToast={addToast}/>}
+            {page === 'documents' && <DocumentsPanel addToast={addToast} onRefresh={refreshStats}/>}
+            {page === 'tasks' && <TasksPanel addToast={addToast} onRefresh={refreshStats} currentUser={currentUser}/>}
             {page === 'notifications' && <NotificationsPanel addToast={addToast} onRefresh={refreshStats}/>}
           </main>
         </div>
@@ -2302,6 +2317,281 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       }
 
       return notifications;
+    }
+
+    // ==================== DOCUMENTS PANEL ====================
+    function DocumentsPanel({ addToast, onRefresh }) {
+      const [documents, setDocuments] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [filter, setFilter] = useState('all');
+      const [typeFilter, setTypeFilter] = useState('all');
+
+      const fetchDocuments = useCallback(async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET);
+          const data = await res.json();
+          if (data.success) setDocuments(data.documents || []);
+        } catch (e) {
+          addToast('Błąd ładowania dokumentów', 'error');
+        }
+        setLoading(false);
+      }, []);
+      useEffect(() => { fetchDocuments(); }, []);
+
+      const updateStatus = async (docId, status) => {
+        try {
+          const payload = encodeURIComponent(JSON.stringify({ docId, status }));
+          const res = await fetch(GAS_URL + '?action=updateDocStatus&secret=' + API_SECRET + '&payload=' + payload);
+          const data = await res.json();
+          if (data.success) {
+            addToast('Status dokumentu zmieniony', 'success');
+            fetchDocuments();
+            onRefresh && onRefresh();
+          }
+        } catch (e) {
+          addToast('Błąd aktualizacji statusu', 'error');
+        }
+      };
+
+      const DOC_TYPES = { invoice:'Faktura', cmr:'CMR', order:'Zlecenie', pod:'POD', sds:'SDS', certificate:'Certyfikat', transport_document:'Dok. transportowy', other:'Inny' };
+      const STATUS_COLORS = { 'new':'badge-cyan', 'processed':'badge-green', 'archived':'badge-gray', 'error':'badge-red', 'no_attachment':'badge-orange' };
+
+      const filtered = documents.filter(d => {
+        if (filter !== 'all' && d.status !== filter) return false;
+        if (typeFilter !== 'all' && d.doc_type !== typeFilter) return false;
+        return true;
+      });
+
+      const statCounts = { total: documents.length, new: documents.filter(d => d.status === 'new').length, processed: documents.filter(d => d.status === 'processed').length };
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',gap:16,marginBottom:20}}>
+            <div className="stat-card" style={{flex:1,background:'rgba(6,182,212,.08)',borderColor:'rgba(6,182,212,.2)'}}>
+              <div className="value" style={{color:'var(--accent-cyan)'}}>{statCounts.total}</div>
+              <div className="label">Dokumentów</div>
+            </div>
+            <div className="stat-card" style={{flex:1,background:'rgba(6,182,212,.15)',borderColor:'rgba(6,182,212,.3)'}}>
+              <div className="value" style={{color:'#22d3ee'}}>{statCounts.new}</div>
+              <div className="label">Nowych</div>
+            </div>
+            <div className="stat-card" style={{flex:1,background:'rgba(34,197,94,.08)',borderColor:'rgba(34,197,94,.2)'}}>
+              <div className="value" style={{color:'var(--accent-green)'}}>{statCounts.processed}</div>
+              <div className="label">Przetworzonych</div>
+            </div>
+          </div>
+
+          <div className="filter-bar">
+            <select value={filter} onChange={e => setFilter(e.target.value)} style={{width:140}}>
+              <option value="all">Wszystkie statusy</option>
+              <option value="new">Nowe</option>
+              <option value="processed">Przetworzone</option>
+              <option value="archived">Zarchiwizowane</option>
+            </select>
+            <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{width:160}}>
+              <option value="all">Wszystkie typy</option>
+              {Object.entries(DOC_TYPES).map(([k,v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+            <button className="btn btn-ghost btn-sm" onClick={fetchDocuments}>{'\u{1F504}'} Odśwież</button>
+          </div>
+
+          {loading ? <div style={{textAlign:'center',padding:60}}><div className="spinner"/></div> :
+           filtered.length === 0 ? (
+            <div className="card" style={{textAlign:'center',padding:'60px 20px'}}>
+              <div style={{fontSize:48,marginBottom:12}}>{'\u{1F4C4}'}</div>
+              <div style={{color:'var(--text-dim)',fontSize:14}}>Brak dokumentów{filter !== 'all' ? ' w tej kategorii' : ''}</div>
+            </div>
+           ) : (
+            <div style={{overflowX:'auto'}}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Nadawca</th>
+                    <th>Typ</th>
+                    <th>Nr ref.</th>
+                    <th>Plik</th>
+                    <th>Rozmiar</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((d, i) => (
+                    <tr key={i}>
+                      <td style={{fontSize:12,color:'var(--text-dim)',whiteSpace:'nowrap'}}>{d.timestamp || ''}</td>
+                      <td>
+                        <div style={{fontWeight:600,fontSize:13}}>{d.from_name || d.company || ''}</div>
+                        <div style={{fontSize:11,color:'var(--text-muted)'}}>{d.from_email || d.from || ''}</div>
+                      </td>
+                      <td><span className="badge badge-purple" style={{fontSize:10}}>{DOC_TYPES[d.doc_type] || d.doc_type || '?'}</span></td>
+                      <td style={{fontFamily:'JetBrains Mono',fontSize:12}}>{d.reference || ''}</td>
+                      <td style={{maxWidth:200,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {d.drive_link ? <a href={d.drive_link} target="_blank" style={{color:'var(--accent-blue)',textDecoration:'none',fontSize:12}}>{d.filename || 'Otwórz'}</a> : (d.filename || '-')}
+                      </td>
+                      <td style={{fontSize:12,color:'var(--text-dim)'}}>{d.file_size || ''}</td>
+                      <td><span className={`badge ${STATUS_COLORS[d.status] || 'badge-gray'}`} style={{fontSize:10}}>{d.status}</span></td>
+                      <td>
+                        <div style={{display:'flex',gap:4}}>
+                          {d.status === 'new' && <button className="btn btn-green btn-sm" style={{fontSize:10,padding:'3px 8px'}} onClick={() => updateStatus(d.id, 'processed')}>{'\u2705'}</button>}
+                          {d.status !== 'archived' && <button className="btn btn-ghost btn-sm" style={{fontSize:10,padding:'3px 8px'}} onClick={() => updateStatus(d.id, 'archived')}>{'\u{1F4E6}'}</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+           )}
+        </div>
+      );
+    }
+
+    // ==================== TASKS PANEL ====================
+    function TasksPanel({ addToast, onRefresh, currentUser }) {
+      const [tasks, setTasks] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [filter, setFilter] = useState('all');
+      const [priorityFilter, setPriorityFilter] = useState('all');
+
+      const fetchTasks = useCallback(async () => {
+        setLoading(true);
+        try {
+          const res = await fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET);
+          const data = await res.json();
+          if (data.success) setTasks(data.tasks || []);
+        } catch (e) {
+          addToast('Błąd ładowania zadań', 'error');
+        }
+        setLoading(false);
+      }, []);
+      useEffect(() => { fetchTasks(); }, []);
+
+      const updateStatus = async (taskId, status) => {
+        try {
+          const payload = encodeURIComponent(JSON.stringify({ taskId, status }));
+          const res = await fetch(GAS_URL + '?action=updateTaskStatus&secret=' + API_SECRET + '&payload=' + payload);
+          const data = await res.json();
+          if (data.success) {
+            addToast('Status zadania zmieniony', 'success');
+            fetchTasks();
+            onRefresh && onRefresh();
+          }
+        } catch (e) {
+          addToast('Błąd aktualizacji statusu', 'error');
+        }
+      };
+
+      const updateAssignee = async (taskId, assignee) => {
+        try {
+          const payload = encodeURIComponent(JSON.stringify({ taskId, assignee }));
+          const res = await fetch(GAS_URL + '?action=updateTaskAssignee&secret=' + API_SECRET + '&payload=' + payload);
+          const data = await res.json();
+          if (data.success) {
+            addToast('Przypisanie zmienione', 'success');
+            fetchTasks();
+          }
+        } catch (e) {
+          addToast('Błąd zmiany przypisania', 'error');
+        }
+      };
+
+      const PRIORITY_ICONS = { high: '\u{1F534}', medium: '\u{1F7E1}', low: '\u{1F7E2}' };
+      const PRIORITY_LABELS = { high: 'Pilne', medium: 'Normalne', low: 'Niskie' };
+      const STATUS_LABELS = { 'new': 'Nowe', 'in_progress': 'W trakcie', 'done': 'Zakończone' };
+      const STATUS_BADGE = { 'new': 'badge-cyan', 'in_progress': 'badge-orange', 'done': 'badge-green' };
+
+      const filtered = tasks.filter(t => {
+        if (filter !== 'all' && t.status !== filter) return false;
+        if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
+        return true;
+      });
+
+      const statCounts = { total: tasks.length, new: tasks.filter(t => t.status === 'new').length, inProgress: tasks.filter(t => t.status === 'in_progress').length, done: tasks.filter(t => t.status === 'done').length };
+
+      return (
+        <div className="fade-in">
+          <div style={{display:'flex',gap:16,marginBottom:20}}>
+            <div className="stat-card" style={{flex:1,background:'rgba(245,158,11,.08)',borderColor:'rgba(245,158,11,.2)'}}>
+              <div className="value" style={{color:'var(--accent-orange)'}}>{statCounts.total}</div>
+              <div className="label">Zadań</div>
+            </div>
+            <div className="stat-card" style={{flex:1,background:'rgba(6,182,212,.15)',borderColor:'rgba(6,182,212,.3)'}}>
+              <div className="value" style={{color:'var(--accent-cyan)'}}>{statCounts.new}</div>
+              <div className="label">Nowych</div>
+            </div>
+            <div className="stat-card" style={{flex:1,background:'rgba(245,158,11,.15)',borderColor:'rgba(245,158,11,.3)'}}>
+              <div className="value" style={{color:'var(--accent-orange)'}}>{statCounts.inProgress}</div>
+              <div className="label">W trakcie</div>
+            </div>
+            <div className="stat-card" style={{flex:1,background:'rgba(34,197,94,.08)',borderColor:'rgba(34,197,94,.2)'}}>
+              <div className="value" style={{color:'var(--accent-green)'}}>{statCounts.done}</div>
+              <div className="label">Zakończone</div>
+            </div>
+          </div>
+
+          <div className="filter-bar">
+            <select value={filter} onChange={e => setFilter(e.target.value)} style={{width:140}}>
+              <option value="all">Wszystkie statusy</option>
+              <option value="new">Nowe</option>
+              <option value="in_progress">W trakcie</option>
+              <option value="done">Zakończone</option>
+            </select>
+            <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)} style={{width:140}}>
+              <option value="all">Wszystkie priorytety</option>
+              <option value="high">{'\u{1F534}'} Pilne</option>
+              <option value="medium">{'\u{1F7E1}'} Normalne</option>
+              <option value="low">{'\u{1F7E2}'} Niskie</option>
+            </select>
+            <button className="btn btn-ghost btn-sm" onClick={fetchTasks}>{'\u{1F504}'} Odśwież</button>
+          </div>
+
+          {loading ? <div style={{textAlign:'center',padding:60}}><div className="spinner"/></div> :
+           filtered.length === 0 ? (
+            <div className="card" style={{textAlign:'center',padding:'60px 20px'}}>
+              <div style={{fontSize:48,marginBottom:12}}>{'\u{2705}'}</div>
+              <div style={{color:'var(--text-dim)',fontSize:14}}>Brak zadań{filter !== 'all' ? ' w tej kategorii' : ''}</div>
+            </div>
+           ) : (
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {filtered.map((t, i) => (
+                <div key={i} className="card" style={{
+                  padding:'16px 20px', display:'flex', alignItems:'flex-start', gap:14,
+                  borderLeft: t.priority === 'high' ? '3px solid var(--accent-red)' : t.priority === 'medium' ? '3px solid var(--accent-orange)' : '3px solid var(--accent-green)',
+                  opacity: t.status === 'done' ? 0.55 : 1, transition: 'all .2s'
+                }}>
+                  <div style={{fontSize:22,flexShrink:0,marginTop:2}}>{PRIORITY_ICONS[t.priority] || '\u{1F7E1}'}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:4}}>
+                      <div style={{fontWeight:600,fontSize:14}}>{t.subject || t.action_required || 'Zadanie'}</div>
+                      <div style={{fontSize:11,color:'var(--text-dim)',flexShrink:0}}>{t.created_at || ''}</div>
+                    </div>
+                    <div style={{fontSize:13,color:'var(--text-muted)',lineHeight:1.5,marginBottom:8}}>{t.ai_summary || t.action_required || ''}</div>
+                    <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                      <span className={`badge ${STATUS_BADGE[t.status] || 'badge-gray'}`} style={{fontSize:10}}>{STATUS_LABELS[t.status] || t.status}</span>
+                      <span className="badge badge-purple" style={{fontSize:10}}>{'\u{1F464}'} {t.assigned_to || '?'}</span>
+                      <span style={{fontSize:11,color:'var(--text-dim)'}}>od: {t.from_name || t.from_email || '?'}</span>
+                      {t.source_mailbox && t.source_mailbox !== 'office' && <span className="badge badge-blue" style={{fontSize:9}}>{t.source_mailbox}@</span>}
+                    </div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:4,flexShrink:0}}>
+                    {t.status === 'new' && <button className="btn btn-primary btn-sm" style={{fontSize:10}} onClick={() => updateStatus(t.id, 'in_progress')}>{'\u{25B6}'} Start</button>}
+                    {t.status === 'in_progress' && <button className="btn btn-green btn-sm" style={{fontSize:10}} onClick={() => updateStatus(t.id, 'done')}>{'\u{2705}'} Gotowe</button>}
+                    {t.status !== 'new' && t.status !== 'in_progress' && <button className="btn btn-ghost btn-sm" style={{fontSize:10}} onClick={() => updateStatus(t.id, 'new')}>{'\u{21A9}'} Wróć</button>}
+                    <select style={{padding:'3px 6px',fontSize:10,width:90}} value={t.assigned_to || ''} onChange={e => updateAssignee(t.id, e.target.value)}>
+                      <option value="Marcin">Marcin</option>
+                      <option value="Kuba">Kuba</option>
+                      <option value="Ania">Ania</option>
+                      <option value="Patryk">Patryk</option>
+                    </select>
+                  </div>
+                </div>
+              ))}
+            </div>
+           )}
+        </div>
+      );
     }
 
     // ==================== NOTIFICATIONS PANEL ====================
