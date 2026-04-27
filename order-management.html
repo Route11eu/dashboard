@@ -133,8 +133,7 @@
     // ==================== CONFIG ====================
     const SUPABASE_URL = 'https://uiobkkocziqhvmqqzior.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpb2Jra29jemlxaHZtcXF6aW9yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyOTY3MTgsImV4cCI6MjA5MDg3MjcxOH0.yYbxK8GpK7KbGpRMCXSEtJOawPSSYTo07aKayzgn8v4';
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw5CijuG7VcMW1fS9CwQI7QBsR2iotKrtxaNQbU0QCHse9RODMCeIx3g-jr3yXv5UM/exec';
-    const EMAIL_GAS_URL = 'https://script.google.com/macros/s/AKfycbxc1oD62fJQT1K9mfxPfanW0Z2HMlfgPG30DoiJuHDFEXj_rv-f5wIUT0VDjfI7yY9Z/exec';
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbxc1oD62fJQT1K9mfxPfanW0Z2HMlfgPG30DoiJuHDFEXj_rv-f5wIUT0VDjfI7yY9Z/exec';
     // Per-user PINs — each team member has their own PIN
     const USER_PINS = { '1168': 'marcin', '1111': 'kuba', '2222': 'ania', '3333': 'patryk' };
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -339,8 +338,8 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
         // Fetch email automation stats
         try {
           const [docsRes, tasksRes] = await Promise.all([
-            fetch(EMAIL_GAS_URL + '?action=getDocuments&secret=' + API_SECRET).then(r => r.json()).catch(() => ({documents:[]})),
-            fetch(EMAIL_GAS_URL + '?action=getTasks&secret=' + API_SECRET).then(r => r.json()).catch(() => ({tasks:[]}))
+            fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET).then(r => r.json()).catch(() => ({documents:[]})),
+            fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET).then(r => r.json()).catch(() => ({tasks:[]}))
           ]);
           setNewDocsCount((docsRes.documents || []).filter(d => d.status === 'new').length);
           setNewTasksCount((tasksRes.tasks || []).filter(t => t.status === 'new').length);
@@ -2330,7 +2329,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const fetchDocuments = useCallback(async () => {
         setLoading(true);
         try {
-          const res = await fetch(EMAIL_GAS_URL + '?action=getDocuments&secret=' + API_SECRET);
+          const res = await fetch(GAS_URL + '?action=getDocuments&secret=' + API_SECRET);
           const data = await res.json();
           if (data.success) setDocuments(data.documents || []);
         } catch (e) {
@@ -2343,7 +2342,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const updateStatus = async (docId, status) => {
         try {
           const payload = encodeURIComponent(JSON.stringify({ docId, status }));
-          const res = await fetch(EMAIL_GAS_URL + '?action=updateDocStatus&secret=' + API_SECRET + '&payload=' + payload);
+          const res = await fetch(GAS_URL + '?action=updateDocStatus&secret=' + API_SECRET + '&payload=' + payload);
           const data = await res.json();
           if (data.success) {
             addToast('Status dokumentu zmieniony', 'success');
@@ -2459,7 +2458,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-          const res = await fetch(EMAIL_GAS_URL + '?action=getTasks&secret=' + API_SECRET);
+          const res = await fetch(GAS_URL + '?action=getTasks&secret=' + API_SECRET);
           const data = await res.json();
           if (data.success) setTasks(data.tasks || []);
         } catch (e) {
@@ -2472,7 +2471,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const updateStatus = async (taskId, status) => {
         try {
           const payload = encodeURIComponent(JSON.stringify({ taskId, status }));
-          const res = await fetch(EMAIL_GAS_URL + '?action=updateTaskStatus&secret=' + API_SECRET + '&payload=' + payload);
+          const res = await fetch(GAS_URL + '?action=updateTaskStatus&secret=' + API_SECRET + '&payload=' + payload);
           const data = await res.json();
           if (data.success) {
             addToast('Status zadania zmieniony', 'success');
@@ -2487,7 +2486,7 @@ WAZNE: Jesli dane nie sa dostepne, wstaw null. Daty w formacie YYYY-MM-DD. NIP z
       const updateAssignee = async (taskId, assignee) => {
         try {
           const payload = encodeURIComponent(JSON.stringify({ taskId, assignee }));
-          const res = await fetch(EMAIL_GAS_URL + '?action=updateTaskAssignee&secret=' + API_SECRET + '&payload=' + payload);
+          const res = await fetch(GAS_URL + '?action=updateTaskAssignee&secret=' + API_SECRET + '&payload=' + payload);
           const data = await res.json();
           if (data.success) {
             addToast('Przypisanie zmienione', 'success');
