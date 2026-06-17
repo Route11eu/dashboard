@@ -5,7 +5,7 @@
   <meta name="google" content="notranslate">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROUTE11 · Employee Dashboard</title>
+  <title>ROUTE11 Â· Employee Dashboard</title>
   <link rel="icon" type="image/png" href="https://loads.route11.eu/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
@@ -13,7 +13,7 @@
     rel="stylesheet">
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.0/babel.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -695,18 +695,18 @@
     const API_SECRET = 'R11Dashboard2026!';
 
     const COUNTRY_FLAGS = {
-      'DE': '🇩🇪', 'PL': '🇵🇱', 'BE': '🇧🇪', 'NL': '🇳🇱', 'FR': '🇫🇷',
-      'AT': '🇦🇹', 'CZ': '🇨🇿', 'HU': '🇭🇺', 'IT': '🇮🇹', 'ES': '🇪🇸',
-      'SK': '🇸🇰', 'CH': '🇨🇭', 'DK': '🇩🇰', 'SE': '🇸🇪', 'UK': '🇬🇧',
-      'RO': '🇷🇴', 'HR': '🇭🇷', 'LT': '🇱🇹', 'LV': '🇱🇻', 'EE': '🇪🇪',
-      'SI': '🇸🇮', 'BG': '🇧🇬', 'PT': '🇵🇹', 'LU': '🇱🇺', 'RS': '🇷🇸',
-      'FI': '🇫🇮', 'NO': '🇳🇴', 'GR': '🇬🇷'
+      'DE': 'đź‡©đź‡Ş', 'PL': 'đź‡µđź‡±', 'BE': 'đź‡§đź‡Ş', 'NL': 'đź‡łđź‡±', 'FR': 'đź‡«đź‡·',
+      'AT': 'đź‡¦đź‡ą', 'CZ': 'đź‡¨đź‡ż', 'HU': 'đź‡­đź‡ş', 'IT': 'đź‡®đź‡ą', 'ES': 'đź‡Şđź‡¸',
+      'SK': 'đź‡¸đź‡°', 'CH': 'đź‡¨đź‡­', 'DK': 'đź‡©đź‡°', 'SE': 'đź‡¸đź‡Ş', 'UK': 'đź‡¬đź‡§',
+      'RO': 'đź‡·đź‡´', 'HR': 'đź‡­đź‡·', 'LT': 'đź‡±đź‡ą', 'LV': 'đź‡±đź‡»', 'EE': 'đź‡Şđź‡Ş',
+      'SI': 'đź‡¸đź‡®', 'BG': 'đź‡§đź‡¬', 'PT': 'đź‡µđź‡ą', 'LU': 'đź‡±đź‡ş', 'RS': 'đź‡·đź‡¸',
+      'FI': 'đź‡«đź‡®', 'NO': 'đź‡łđź‡´', 'GR': 'đź‡¬đź‡·'
     };
 
     const getFlag = (code) => {
-      if (!code) return '🏳️';
+      if (!code) return 'đźŹłď¸Ź';
       const cc = code.split('-')[0];
-      return COUNTRY_FLAGS[cc] || '🏳️';
+      return COUNTRY_FLAGS[cc] || 'đźŹłď¸Ź';
     };
 
     // ==================== TOAST ====================
@@ -715,7 +715,7 @@
         <div>
           {toasts.map(t => (
             <div key={t.id} className={`toast toast-${t.type}`} onClick={() => removeToast(t.id)}>
-              {t.type === 'success' && '✓ '}{t.type === 'error' && '✕ '}{t.type === 'info' && 'ℹ '}
+              {t.type === 'success' && 'âś“ '}{t.type === 'error' && 'âś• '}{t.type === 'info' && 'â„ą '}
               {t.message}
             </div>
           ))}
@@ -824,7 +824,7 @@
             ))}
             <div />
             <button className="pin-key" onClick={() => handleKey('0')}>0</button>
-            <button className="pin-key" onClick={handleBackspace} style={{ fontSize: 18 }}>⌫</button>
+            <button className="pin-key" onClick={handleBackspace} style={{ fontSize: 18 }}>âŚ«</button>
           </div>
 
           <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 24 }}>
@@ -918,7 +918,7 @@
                   background: 'linear-gradient(135deg, #3b82f6, #a855f7)',
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
                 }}>ROUTE11</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>·</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Â·</span>
                 <span style={{ color: 'var(--text-dim)', fontSize: 13, fontWeight: 500 }}>Dashboard</span>
               </div>
 
@@ -996,7 +996,7 @@
         <div className="fade-in">
           <div style={{ marginBottom: 32 }}>
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 8 }}>
-              Welcome to Route11 👋
+              Welcome to Route11 đź‘‹
             </h1>
             <p style={{ color: 'var(--text-dim)', fontSize: 15 }}>
               Manage loads, mailing and available tankers
@@ -1030,7 +1030,7 @@
 
             <div className="tile tile-blue" onClick={() => onNavigate('loads')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(59,130,246,0.15)' }}>📋</div>
+                <div className="tile-icon" style={{ background: 'rgba(59,130,246,0.15)' }}>đź“‹</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Loads Manager</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Manage active loads</div>
@@ -1043,7 +1043,7 @@
 
             <div className="tile tile-green" onClick={() => onNavigate('add-load')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(34,197,94,0.15)' }}>➕</div>
+                <div className="tile-icon" style={{ background: 'rgba(34,197,94,0.15)' }}>âž•</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Add Load</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Post new load</div>
@@ -1056,7 +1056,7 @@
 
             <div className="tile tile-purple" onClick={() => window.open('https://mailing.route11.eu?auth=1168', '_blank')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(168,85,247,0.15)' }}>📧</div>
+                <div className="tile-icon" style={{ background: 'rgba(168,85,247,0.15)' }}>đź“§</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Mailing Hub</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Email campaigns</div>
@@ -1069,7 +1069,7 @@
 
             <div className="tile tile-orange" onClick={() => onNavigate('tankers')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>🚚</div>
+                <div className="tile-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>đźšš</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Available Tankers</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Free tanker trucks</div>
@@ -1082,7 +1082,7 @@
 
             <div className="tile tile-cyan" onClick={() => onNavigate('add-tanker')}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(6,182,212,0.15)' }}>🚛</div>
+                <div className="tile-icon" style={{ background: 'rgba(6,182,212,0.15)' }}>đźš›</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Add Free Tanker</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Post available truck</div>
@@ -1096,14 +1096,14 @@
             <div className="tile tile-red" onClick={() => window.location.href = 'order-management.html'}
               style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, var(--bg-card), #1a1520)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div className="tile-icon" style={{ background: 'rgba(239,68,68,0.15)' }}>📋</div>
+                <div className="tile-icon" style={{ background: 'rgba(239,68,68,0.15)' }}>đź“‹</div>
                 <div>
                   <div style={{ fontSize: 18, fontWeight: 700 }}>Order Management</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>Transport Management System</div>
                 </div>
               </div>
               <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-                Zarządzanie zleceniami transportowymi — firmy, zlecenia, faktury, cash flow
+                ZarzÄ…dzanie zleceniami transportowymi â€” firmy, zlecenia, faktury, cash flow
               </p>
             </div>
 
@@ -1211,17 +1211,17 @@
       return (
         <div className="fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>â† Back</button>
             <h2 style={{ fontSize: 22, fontWeight: 700, flex: 1 }}>Loads Manager</h2>
             <button className="btn btn-primary btn-sm" onClick={onRefresh} disabled={loading}>
-              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🔄'} Refresh
+              {loading ? <div className="spinner" style={{ width: 14, height: 14 }} /> : 'đź”„'} Refresh
             </button>
           </div>
 
           {/* Filters */}
           <div className="card" style={{ marginBottom: 16, padding: 16, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <input
-              placeholder="🔍 Search by city, company..."
+              placeholder="đź”Ť Search by city, company..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ maxWidth: 300 }}
@@ -1233,13 +1233,13 @@
             </select>
             <input
               ref={fpRef}
-              placeholder="📅 Date range..."
+              placeholder="đź“… Date range..."
               readOnly
               style={{ maxWidth: 220, cursor: 'pointer' }}
             />
             {dateRange.length > 0 && (
               <button className="btn btn-ghost btn-sm" onClick={() => { setDateRange([]); if(fpInstance.current) fpInstance.current.clear(); }}>
-                ✕ Clear dates
+                âś• Clear dates
               </button>
             )}
             <span style={{ fontSize: 13, color: 'var(--text-dim)', marginLeft: 'auto' }}>
@@ -1266,7 +1266,7 @@
                 <div key={dateKey}>
                   {/* Date header */}
                   <div className="date-header">
-                    <span className="day">📅 {dayName} {dateKey}</span>
+                    <span className="day">đź“… {dayName} {dateKey}</span>
                     <span className="count">{dateCount} loads</span>
                   </div>
 
@@ -1282,7 +1282,7 @@
                         {countries[cc].map(r => (
                           <div key={r.id} className="route-row">
                             <span style={{ fontFamily: 'JetBrains Mono', fontSize: 12, color: 'var(--text-dim)' }}>
-                              {r.dt ? r.dt.substring(0, 5) : '—'}
+                              {r.dt ? r.dt.substring(0, 5) : 'â€”'}
                             </span>
                             <div>
                               <div style={{ fontSize: 14, fontWeight: 600 }}>
@@ -1306,10 +1306,10 @@
                               )}
                             </div>
                             <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                              <button className="btn-icon" title="View Owner" onClick={() => openModal(r, 'owner')}>👁️</button>
-                              <button className="btn-icon" title="Contact" onClick={() => openModal(r, 'contact')}>📩</button>
+                              <button className="btn-icon" title="View Owner" onClick={() => openModal(r, 'owner')}>đź‘ď¸Ź</button>
+                              <button className="btn-icon" title="Contact" onClick={() => openModal(r, 'contact')}>đź“©</button>
                               <button className="btn-icon" title="Delete" onClick={() => openModal(r, 'delete')}
-                                style={{ borderColor: 'rgba(239,68,68,0.3)' }}>🗑️</button>
+                                style={{ borderColor: 'rgba(239,68,68,0.3)' }}>đź—‘ď¸Ź</button>
                             </div>
                           </div>
                         ))}
@@ -1341,27 +1341,27 @@
         <div className="modal-overlay" onClick={onClose}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
-              👁️ Load Owner #{route.id}
+              đź‘ď¸Ź Load Owner #{route.id}
             </h3>
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 4 }}>ROUTE</div>
               <div style={{ fontSize: 16, fontWeight: 600 }}>
-                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+                {getFlag(route.lc)} {route.ln} â†’ {getFlag(route.uc)} {route.un}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                {route.dt} · {route.tk} · {route.adr ? '🔴 ADR' : '✅ NO ADR'}
+                {route.dt} Â· {route.tk} Â· {route.adr ? 'đź”´ ADR' : 'âś… NO ADR'}
               </div>
             </div>
 
             <div className="card" style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>SOURCE COMPANY</div>
-              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{route.src || '—'}</div>
+              <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{route.src || 'â€”'}</div>
 
               <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>EMAIL</div>
               <div style={{ fontSize: 14, fontFamily: 'JetBrains Mono' }}>
                 <a href={`mailto:${route.se}`} style={{ color: 'var(--accent-blue)', textDecoration: 'none' }}>
-                  {route.se || '—'}
+                  {route.se || 'â€”'}
                 </a>
               </div>
             </div>
@@ -1395,7 +1395,7 @@
             const res = await fetch(url);
             const data = await res.json();
             if (data.success) {
-              addToast(`✅ Load #${route.id} deleted permanently (${route.ln} → ${route.un})`, 'success');
+              addToast(`âś… Load #${route.id} deleted permanently (${route.ln} â†’ ${route.un})`, 'success');
             } else {
               addToast(`Local OK, GitHub error: ${data.error}`, 'error');
             }
@@ -1412,22 +1412,22 @@
         <div className="modal-overlay" onClick={onClose}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, color: 'var(--accent-red)' }}>
-              🗑️ Delete load #{route.id}?
+              đź—‘ď¸Ź Delete load #{route.id}?
             </h3>
 
             <div className="card" style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 16, fontWeight: 600 }}>
-                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+                {getFlag(route.lc)} {route.ln} â†’ {getFlag(route.uc)} {route.un}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                {route.dt} · {route.src} · {route.tk}
+                {route.dt} Â· {route.src} Â· {route.tk}
               </div>
             </div>
 
             <p style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 20, lineHeight: 1.5 }}>
               {APPS_SCRIPT_URL
-                ? '⚠️ This will permanently remove the load from loads.route11.eu'
-                : '⚠️ Visual delete only. Load will return after refresh. Deploy Web API for permanent deletion.'}
+                ? 'âš ď¸Ź This will permanently remove the load from loads.route11.eu'
+                : 'âš ď¸Ź Visual delete only. Load will return after refresh. Deploy Web API for permanent deletion.'}
             </p>
 
             <div style={{ display: 'flex', gap: 8 }}>
@@ -1435,7 +1435,7 @@
                 Cancel
               </button>
               <button className="btn btn-red" onClick={handleDelete} disabled={deleting} style={{ flex: 1, justifyContent: 'center' }}>
-                {deleting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '🗑️'} Delete
+                {deleting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : 'đź—‘ď¸Ź'} Delete
               </button>
             </div>
           </div>
@@ -1446,12 +1446,12 @@
     // ==================== CONTACT MODAL ====================
     function ContactModal({ route, onClose, addToast }) {
       const [message, setMessage] = useState(
-        `Hello,\n\nI am interested in your load:\n${route.ln} → ${route.un} (${route.dt})\n\nIs it still available?\n\nBest regards,\nRoute11 Team`
+        `Hello,\n\nI am interested in your load:\n${route.ln} â†’ ${route.un} (${route.dt})\n\nIs it still available?\n\nBest regards,\nRoute11 Team`
       );
       const [sending, setSending] = useState(false);
 
       const handleSend = () => {
-        const subject = encodeURIComponent(`Route11 Inquiry: ${route.ln} → ${route.un} (${route.dt})`);
+        const subject = encodeURIComponent(`Route11 Inquiry: ${route.ln} â†’ ${route.un} (${route.dt})`);
         const body = encodeURIComponent(message);
         window.open(`mailto:${route.se}?subject=${subject}&body=${body}`, '_blank');
         addToast(`Email opened to: ${route.se}`, 'success');
@@ -1462,12 +1462,12 @@
         <div className="modal-overlay" onClick={onClose}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>
-              📩 Contact Owner
+              đź“© Contact Owner
             </h3>
 
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>
-                {getFlag(route.lc)} {route.ln} → {getFlag(route.uc)} {route.un}
+                {getFlag(route.lc)} {route.ln} â†’ {getFlag(route.uc)} {route.un}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 Do: {route.src} ({route.se})
@@ -1487,7 +1487,7 @@
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={handleSend} style={{ flex: 1, justifyContent: 'center' }}>
-                📩 Open Email
+                đź“© Open Email
               </button>
             </div>
           </div>
@@ -1601,7 +1601,7 @@
         }
 
         if (!APPS_SCRIPT_URL) {
-          addToast('⚠️ Form ready but Web API not deployed yet.', 'info');
+          addToast('âš ď¸Ź Form ready but Web API not deployed yet.', 'info');
           return;
         }
 
@@ -1615,7 +1615,7 @@
           const res = await fetch(url);
           const data = await res.json();
           if (data.success) {
-            addToast(`✅ Load added: ${form.ln} → ${form.un} (ID #${data.route?.id})`, 'success');
+            addToast(`âś… Load added: ${form.ln} â†’ ${form.un} (ID #${data.route?.id})`, 'success');
             setForm({ dt: '', ln: '', lc: '', un: '', uc: '', adr: false, tk: 'MONO/MULTI', nt: '', src: '', se: '' });
             onRefresh();
           } else {
@@ -1630,7 +1630,7 @@
       return (
         <div className="fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <button className="btn btn-ghost btn-sm" onClick={onBack}>← Back</button>
+            <button className="btn btn-ghost btn-sm" onClick={onBack}>â† Back</button>
             <h2 style={{ fontSize: 22, fontWeight: 700 }}>Add Load</h2>
           </div>
 
@@ -1699,7 +1699,7 @@
                 Cancel
               </button>
               <button className="btn btn-green" onClick={handleSubmit} disabled={submitting} style={{ flex: 1, justifyContent: 'center' }}>
-                {submitting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : '➕'} Add Load
+                {submitting ? <div className="spinner" style={{ width: 14, height: 14 }} /> : 'âž•'} Add Load
               </button>
             </div>
           </div>
@@ -2018,16 +2018,16 @@
     function MailingRedirect({ onBack }) {
       return (
         <div className="fade-in" style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>đź“§</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12 }}>Mailing Hub</h2>
           <p style={{ color: 'var(--text-dim)', marginBottom: 24 }}>
             Mailing Hub is available on a separate page
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button className="btn btn-ghost" onClick={onBack}>← Back</button>
+            <button className="btn btn-ghost" onClick={onBack}>â† Back</button>
             <a href="https://mailing.route11.eu" target="_blank" rel="noopener noreferrer"
               className="btn btn-primary" style={{ textDecoration: 'none' }}>
-              Open Mailing Hub →
+              Open Mailing Hub â†’
             </a>
           </div>
         </div>
